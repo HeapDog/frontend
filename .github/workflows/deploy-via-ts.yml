@@ -24,12 +24,6 @@ jobs:
           oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
           oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
           tags: tag:ci 
-      
-      - name: Wait a moment for Tailscale to come up
-        run: |
-          # give tailscale a short moment to stabilize and show status for debugging
-          sleep 3
-          tailscale status || true
 
       - name: SSH to VM and deploy
         # we use a single ssh call that runs a small bash deployment script on the remote host
