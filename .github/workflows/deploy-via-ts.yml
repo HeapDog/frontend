@@ -1,0 +1,67 @@
+name: Deploy to VM via Tailscale
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-to-vm
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo (optional)
+        uses: actions/checkout@v4
+
+      # Start Tailscale on the runner using the official GitHub Action.
+      # The action reads the client id / secret from env here (you said you already put them as secrets).
+      - name: Start Tailscale
+        uses: tailscale/github-action@v4
+        env:
+          TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          TS_OAUTH_SECRET:    ${{ secrets.TS_OAUTH_SECRET }}
+        # no "with" required here; env vars let the action perform the auth/login step.
+      
+      - name: Wait a moment for Tailscale to come up
+        run: |
+          # give tailscale a short moment to stabilize and show status for debugging
+          sleep 3
+          tailscale status || true
+
+      - name: SSH to VM and deploy
+        # we use a single ssh call that runs a small bash deployment script on the remote host
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_IP }} << 'REMOTE'
+          set -euo pipefail
+
+          echo "Entering project directory..."
+          cd '${{ secrets.PROJECT_PATH }}/frontend'
+
+          echo "Pulling latest from origin/main..."
+          git fetch origin main
+          git reset --hard origin/main
+
+          echo "Stopping frontend service (if running)..."
+          docker compose -f compose.yml stop frontend || true
+
+          echo "Removing old container (if exists)..."
+          docker compose -f compose.yml rm -f frontend || true
+
+          echo "Building the frontend container..."
+          docker compose -f compose.yml build frontend
+
+          echo "Starting the frontend container in headless/detached mode..."
+          docker compose -f compose.yml up -d --no-deps --force-recreate frontend
+
+          echo "Cleaning up unused images and containers..."
+          docker image prune -af || true
+          docker container prune -f || true
+          docker system prune -f || true
+
+          echo "Deployment finished successfully."
+          exit 0
+          REMOTE
+        # ensure secrets are available to the step's runner context (they are by default)
