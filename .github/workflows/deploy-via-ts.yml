@@ -27,23 +27,15 @@ jobs:
 
       - name: SSH to VM and deploy
         run: |
-          ssh -o StrictHostKeyChecking=no ${{ secrets.EC2_USER }}@${{ secrets.EC2_IP }} "
-            echo "Entering project directory..."
+          ssh -o "StrictHostKeyChecking no" ${{ secrets.EC2_USER }}@${{ secrets.EC2_IP }} "
             cd ${{ secrets.PROJECT_PATH }}/frontend
-            echo "Pulling latest from origin/main..."
             git fetch origin main
             git reset --hard origin/main
-            echo "Stopping frontend service (if running)..."
             docker compose stop frontend
-            echo "Removing old container (if exists)..."
             docker compose rm -f frontend
-            echo "Building the frontend container..."
             docker compose build frontend
-            echo "Starting the frontend container in headless mode..."
             docker compose up -d --no-deps --force-recreate frontend
-            echo "Cleaning up unused images and containers..."
             docker image prune -af
             docker container prune -f
             docker system prune -f
-            echo "Deployment finished successfully.
           "
