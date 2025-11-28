@@ -24,6 +24,7 @@ services:
     environment:
       - PORT=5050
       - NODE_ENV=production
+      - SPRING_BOOT_API_URL=${SPRING_BOOT_API_URL}
     networks:
       - heapdog-network
 
