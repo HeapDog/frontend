@@ -57,5 +57,14 @@ jobs:
 
           echo "Deployment finished successfully."
           exit 0
-          REMOTE
-        # ensure secrets are available to the step's runner context (they are by default)
+          REMOTE_SCRIPT
+
+          ssh_exit=$?
+          echo "SSH client exit code: $ssh_exit"
+
+          if [ "$ssh_exit" -ne 0 ]; then
+            echo "ERROR: SSH command returned non-zero exit code: $ssh_exit"
+            exit $ssh_exit
+          fi
+
+          echo "Workflow step completed (ssh returned 0)."
