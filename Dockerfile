@@ -1,17 +1,28 @@
-FROM node:25-trixie
+# ---------- 1. Builder stage ----------
+FROM node:25-trixie AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Install dependencies first (for better caching)
 COPY package*.json ./
 RUN npm install
 
-# Copy rest of the app
 COPY . .
+RUN npm run build
 
-# Expose Next.js port
-EXPOSE 3000
 
-# Default command
-CMD ["npm", "run", "dev"]
+# ---------- 2. Production runner ----------
+FROM node:25-trixie
+
+WORKDIR /app
+
+COPY --from=builder /app/package*.json ./
+RUN npm install --omit=dev
+
+COPY --from=builder /app/.next ./.next
+COPY --from=builder /app/public ./public
+
+ENV PORT=5050
+EXPOSE 5050
+
+CMD ["npm", "run", "start"]
+

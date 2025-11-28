@@ -1,8 +1,8 @@
 services:
-  frontend:
+  frontend-dev:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     working_dir: /app
     container_name: nextjs-app
     volumes:
@@ -11,6 +11,19 @@ services:
     ports:
       - "3000:3000"
     command: ["npm", "run", "dev"]
+    networks:
+      - heapdog-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nextjs-app-prod
+    ports:
+      - "5050:5050"
+    environment:
+      - PORT=5050
+      - NODE_ENV=production
     networks:
       - heapdog-network
 
