@@ -1,0 +1,20 @@
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /app
+    container_name: nextjs-app
+    volumes:
+      - .:/app
+      - /app/node_modules   # prevent node_modules from being overwritten
+    ports:
+      - "3000:3000"
+    command: ["npm", "run", "dev"]
+    networks:
+      - heapdog-network
+
+
+networks:
+  heapdog-network:
+    external: true
