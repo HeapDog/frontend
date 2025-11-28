@@ -20,10 +20,10 @@ jobs:
       # The action reads the client id / secret from env here (you said you already put them as secrets).
       - name: Start Tailscale
         uses: tailscale/github-action@v4
-        env:
-          TS_OAUTH_CLIENT_ID: ${{ secrets.TS_OAUTH_CLIENT_ID }}
-          TS_OAUTH_SECRET:    ${{ secrets.TS_OAUTH_SECRET }}
-        # no "with" required here; env vars let the action perform the auth/login step.
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci 
       
       - name: Wait a moment for Tailscale to come up
         run: |
