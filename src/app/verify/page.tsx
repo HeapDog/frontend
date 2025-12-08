@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import VerifyPage from "./verify-page";
 import { Metadata } from "next";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Verify Email | HeapDog",
@@ -15,6 +16,10 @@ export default async function Page() {
     redirect("/");
   }
 
-  return <VerifyPage />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <VerifyPage />
+    </Suspense>
+  );
 }
 

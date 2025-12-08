@@ -4,6 +4,7 @@ import { OrganizationMember } from "@/lib/types/organization";
 import { PaginatedData } from "@/lib/types/api";
 import { MembersView } from "./members-view";
 import { cookies } from "next/headers";
+import { Suspense } from "react";
 
 async function getMembers(slug: string, page: number, size: number) {
   try {
@@ -61,5 +62,9 @@ export default async function MembersPage({ params, searchParams }: PageProps) {
       )
   }
 
-  return <MembersView data={data} />;
+  return (
+    <Suspense fallback={<div>Loading members...</div>}>
+      <MembersView data={data} />
+    </Suspense>
+  );
 }
