@@ -32,10 +32,10 @@ jobs:
             git checkout dev
             git fetch origin dev
             git reset --hard origin/dev
-            docker compose stop frontend
-            docker compose rm -f frontend
-            docker compose build frontend
-            docker compose up -d --no-deps --force-recreate frontend
+            docker compose -f compose.dev.yml stop frontend-dev
+            docker compose -f compose.dev.yml rm -f frontend-dev
+            docker compose -f compose.dev.yml build frontend-dev
+            docker compose -f compose.dev.yml up -d --force-recreate frontend-dev
             docker image prune -af
             docker container prune -f
             docker system prune -f
