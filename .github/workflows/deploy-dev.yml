@@ -1,0 +1,43 @@
+name: Deploy to Dev VM
+
+on:
+  push:
+    branches: ["dev"]
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-to-vm
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo (optional)
+        uses: actions/checkout@v4
+
+      # Start Tailscale on the runner using the official GitHub Action.
+      # The action reads the client id / secret from env here (you said you already put them as secrets).
+      - name: Start Tailscale
+        uses: tailscale/github-action@v4
+        with:
+          oauth-client-id: ${{ secrets.TS_OAUTH_CLIENT_ID }}
+          oauth-secret: ${{ secrets.TS_OAUTH_SECRET }}
+          tags: tag:ci 
+
+      - name: SSH to VM and deploy
+        run: |
+          ssh -o "StrictHostKeyChecking no" ${{ secrets.INSTANCE_USER}}@${{ secrets.DEV_INSTANCE_TS_IP}} "
+            cd ${{ secrets.PROJECT_PATH }}/frontend
+            git checkout dev
+            git fetch origin main
+            git reset --hard origin/main
+            docker compose stop frontend
+            docker compose rm -f frontend
+            docker compose build frontend
+            docker compose up -d --no-deps --force-recreate frontend
+            docker image prune -af
+            docker container prune -f
+            docker system prune -f
+          "
+
