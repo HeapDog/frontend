@@ -2,6 +2,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import SigninPage from "./signin-page";
 import { Metadata } from "next";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   title: "Sign In | HeapDog",
@@ -20,5 +21,9 @@ export default async function Page(props: {
     redirect(redirectUrl);
   }
 
-  return <SigninPage />;
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <SigninPage />
+    </Suspense>
+  );
 }

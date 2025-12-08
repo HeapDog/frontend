@@ -4,6 +4,7 @@ import { OrganizationInvitation } from "@/lib/types/organization";
 import { PaginatedData } from "@/lib/types/api";
 import { InvitationsView } from "./invitations-view";
 import { cookies } from "next/headers";
+import { Suspense } from "react";
 
 async function getInvitations(slug: string, page: number, size: number) {
   try {
@@ -56,5 +57,9 @@ export default async function InvitationsPage({ params, searchParams }: PageProp
 
   const data = await getInvitations(slug, page, size);
 
-  return <InvitationsView organizationSlug={slug} initialData={data} currentUserRole={role} />;
+  return (
+    <Suspense fallback={<div>Loading invitations...</div>}>
+      <InvitationsView organizationSlug={slug} initialData={data} currentUserRole={role} />
+    </Suspense>
+  );
 }

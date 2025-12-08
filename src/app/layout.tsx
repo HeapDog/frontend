@@ -10,6 +10,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { getNotifications, getUnreadCount } from "@/lib/notifications";
 
+export const dynamic = "force-dynamic";
+
 const geistSans = Geist({
     variable: "--font-geist-sans",
     subsets: ["latin"],
