@@ -30,8 +30,8 @@ jobs:
           ssh -o "StrictHostKeyChecking no" ${{ secrets.INSTANCE_USER}}@${{ secrets.DEV_INSTANCE_TS_IP}} "
             cd ${{ secrets.PROJECT_PATH }}/frontend
             git checkout dev
-            git fetch origin main
-            git reset --hard origin/main
+            git fetch origin dev
+            git reset --hard origin/dev
             docker compose stop frontend
             docker compose rm -f frontend
             docker compose build frontend
