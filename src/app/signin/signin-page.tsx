@@ -35,11 +35,11 @@ import { SigninRequest, SigninResponse } from "@/lib/types/auth";
 import { ApiErrorResponse, ApiResponse } from "@/lib/types/api";
 
 const formSchema = z.object({
-  username: z.string().min(2, {
-    message: "Username or email must be at least 2 characters.",
+  username: z.string().min(3, {
+    message: "Username or email must be at least 3 characters.",
   }),
-  password: z.string().min(1, {
-    message: "Password is required.",
+  password: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
   }),
 });
 
