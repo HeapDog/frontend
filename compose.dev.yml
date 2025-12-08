@@ -1,18 +1,19 @@
 services:
-  frontend:
+  frontend-dev:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: frontend-prod
+    container_name: frontend-dev
     ports:
-      - "5050:5050"
+      - "3000:3000"
     environment:
-      - PORT=5050
+      - PORT=3000
       - NODE_ENV=production
       - SPRING_BOOT_API_URL=${SPRING_BOOT_API_URL}
     networks:
-      - heapdog-network
+      - heapdog-network-dev
 
 networks:
-  heapdog-network:
+  heapdog-network-dev:
     external: true
+

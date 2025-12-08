@@ -174,7 +174,6 @@
   top: 4.5rem !important; /* Adjust spinner position if visible */
   right: 1rem !important;
 }
-
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -183,3 +182,4 @@
     @apply bg-background text-foreground;
   }
 }
+
