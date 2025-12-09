@@ -32,12 +32,14 @@ import { ApiErrorResponse, ApiResponse } from "@/lib/types/api";
 const formSchema = z.object({
   username: z.string().min(3, {
     message: "Username must be at least 3 characters.",
+  }).max(20, {
+    message: "Username must be at most 20 characters.",
   }),
   email: z.string().email({
     message: "Please enter a valid email address.",
   }),
-  password: z.string().min(4, {
-    message: "Password must be at least 4 characters.",
+  password: z.string().min(8, {
+    message: "Password must be at least 8 characters.",
   }),
 });
 
