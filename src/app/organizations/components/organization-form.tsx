@@ -67,6 +67,14 @@ export function OrganizationForm({
   checkSlugAvailability,
   readOnly = false
 }: OrganizationFormProps) {
+  // Some browser extensions (password managers, etc.) mutate <input> DOM before React hydrates,
+  // which can cause hydration mismatches. We gate rendering of a few "high risk" inputs until mount.
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   const form = useForm<OrganizationFormValues>({
     resolver: zodResolver(organizationFormSchema),
     defaultValues: {
@@ -231,7 +239,25 @@ export function OrganizationForm({
                 <div className="relative">
                     <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <FormControl>
-                    <Input placeholder="contact@acme.com" type="email" className="pl-9" {...field} />
+                    {isMounted ? (
+                      <Input
+                        placeholder="contact@acme.com"
+                        type="email"
+                        className="pl-9"
+                        autoComplete="off"
+                        data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-bwignore="true"
+                        {...field}
+                      />
+                    ) : (
+                      // Avoid rendering an actual <input> during SSR/first client render to prevent
+                      // extension-injected DOM from causing hydration mismatches.
+                      <div
+                        className="h-9 w-full rounded-md border border-input bg-transparent pl-9"
+                        aria-hidden="true"
+                      />
+                    )}
                     </FormControl>
                 </div>
                 <FormDescription>

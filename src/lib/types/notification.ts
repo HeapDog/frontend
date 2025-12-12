@@ -1,11 +1,27 @@
+export type NotificationType = 
+    | "INVITATION" 
+    | "INFO" 
+    | "WARNING" 
+    | "ERROR" 
+    | "INVITATION_ACCEPTED" 
+    | "INVITATION_SENT"
+    | "ORGANIZATION_MEMBER_ROLE_UPDATED";
+
 export interface Notification {
     id: number;
     message: string;
     link: string;
     read: boolean;
     clicked: boolean;
-    type: "INVITATION" | "INFO" | "WARNING" | "ERROR";
+    type: NotificationType;
     createdAt: string;
+    userId?: number;
+}
+
+export interface NotificationEvent {
+    timestamp: string;
+    data: Notification;
+    path: string;
 }
 
 export interface NotificationResponse {

@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Menu, X, Trophy, Code2, Swords, Sun, Moon, LogIn, LogOut, User as UserIcon, SettingsIcon, Building2, Plus, Bell, Info, Mail, AlertTriangle, AlertCircle } from "lucide-react";
+import { Menu, X, Trophy, Code2, Swords, Sun, Moon, LogIn, LogOut, User as UserIcon, SettingsIcon, Building2, Plus, Bell, Info, Mail, AlertTriangle, AlertCircle, Send, UserCheck, Shield } from "lucide-react";
 import { useTheme } from "next-themes";
 import { User, Notification, NotificationResponse, UnreadCountResponse } from "@/lib/types";
 import { toast } from "sonner";
-import { useMutation, useInfiniteQuery } from "@tanstack/react-query";
+import { useMutation, useInfiniteQuery, useQueryClient } from "@tanstack/react-query";
 import { Spinner } from "@/components/ui/spinner";
 import { motion } from "framer-motion";
 import {
@@ -37,11 +37,131 @@ interface NavbarProps {
   unreadCount: UnreadCountResponse;
 }
 
+const getNotificationIcon = (type: string) => {
+  switch (type) {
+    case "INVITATION":
+      return <Mail className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />;
+    case "INVITATION_SENT":
+      return <Send className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />;
+    case "INVITATION_ACCEPTED":
+      return <UserCheck className="h-4 w-4 text-green-500 mt-0.5 flex-shrink-0" />;
+    case "ORGANIZATION_MEMBER_ROLE_UPDATED":
+      return <Shield className="h-4 w-4 text-purple-500 mt-0.5 flex-shrink-0" />;
+    case "WARNING":
+      return <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />;
+    case "ERROR":
+      return <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />;
+    case "INFO":
+    default:
+      return <Info className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />;
+  }
+};
+
+const formatNotificationDate = (dateString: string) => {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diff = now.getTime() - date.getTime();
+  
+  // Less than a minute
+  if (diff < 60 * 1000) {
+      return "Just now";
+  }
+  
+  // Less than an hour
+  if (diff < 60 * 60 * 1000) {
+      const minutes = Math.floor(diff / (60 * 1000));
+      return `${minutes}m ago`;
+  }
+  
+  // Less than a day
+  if (diff < 24 * 60 * 60 * 1000) {
+      const hours = Math.floor(diff / (60 * 60 * 1000));
+      return `${hours}h ago`;
+  }
+  
+  // Less than a week
+  if (diff < 7 * 24 * 60 * 60 * 1000) {
+      const days = Math.floor(diff / (24 * 60 * 60 * 1000));
+      return `${days}d ago`;
+  }
+  
+  return date.toLocaleDateString();
+};
+
 const Navbar = ({ user, initialNotifications, unreadCount }: NavbarProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const { setTheme, resolvedTheme } = useTheme();
   const router = useRouter();
   const pathname = usePathname();
+  const queryClient = useQueryClient();
+  const [sseToken, setSseToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user && !sseToken) {
+        fetch('/api/sse-token')
+            .then(res => {
+                if(res.ok) return res.json();
+                throw new Error('Failed to fetch SSE token');
+            })
+            .then(data => {
+                setSseToken(data.token);
+            })
+            .catch(err => console.error("Failed to fetch SSE token", err));
+    }
+  }, [user, sseToken]);
+
+  useEffect(() => {
+    if (!sseToken || !process.env.NEXT_PUBLIC_SSE_SERVER) return;
+    console.log("SSE token:", sseToken);
+
+    const url = `${process.env.NEXT_PUBLIC_SSE_SERVER}/notifications/subscribe?token=${sseToken}`;
+    const eventSource = new EventSource(url);
+
+    eventSource.onopen = () => {
+        console.log("SSE connection opened");
+    };
+
+    const handleMessage = (event: MessageEvent) => {
+        try {
+            console.log("SSE event received:", event.data);
+            const parsedData = JSON.parse(event.data);
+            const notification: Notification = parsedData.data || parsedData;
+            
+            toast(notification.message, {
+                icon: getNotificationIcon(notification.type),
+                description: formatNotificationDate(notification.createdAt),
+                action: {
+                    label: "View",
+                    onClick: () => router.push(notification.link)
+                }
+            });
+
+            setCurrentUnreadCount(prev => ({
+                unread: prev.unread + 1,
+                total: prev.total + 1
+            }));
+            
+            queryClient.invalidateQueries({ queryKey: ["notifications"] });
+
+        } catch (e) {
+            console.error("Error parsing SSE event", e);
+        }
+    };
+
+    // Listen for default messages
+    eventSource.onmessage = handleMessage;
+    // Listen for named 'notification' events which is common in Spring Boot
+    eventSource.addEventListener("notification", handleMessage);
+
+    eventSource.onerror = (err) => {
+        console.error("SSE connection error", err);
+    };
+
+    return () => {
+        eventSource.removeEventListener("notification", handleMessage);
+        eventSource.close();
+    };
+  }, [sseToken, queryClient, router]);
 
   const fetchNotifications = async ({ pageParam = 1 }) => {
     const res = await fetch(`/api/notifications?page=${pageParam}&size=10`);
@@ -212,50 +332,6 @@ const Navbar = ({ user, initialNotifications, unreadCount }: NavbarProps) => {
     });
   };
 
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case "INVITATION":
-        return <Mail className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />;
-      case "WARNING":
-        return <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 flex-shrink-0" />;
-      case "ERROR":
-        return <AlertCircle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />;
-      case "INFO":
-      default:
-        return <Info className="h-4 w-4 text-gray-500 mt-0.5 flex-shrink-0" />;
-    }
-  };
-
-  const formatNotificationDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    
-    // Less than a minute
-    if (diff < 60 * 1000) {
-        return "Just now";
-    }
-    
-    // Less than an hour
-    if (diff < 60 * 60 * 1000) {
-        const minutes = Math.floor(diff / (60 * 1000));
-        return `${minutes}m ago`;
-    }
-    
-    // Less than a day
-    if (diff < 24 * 60 * 60 * 1000) {
-        const hours = Math.floor(diff / (60 * 60 * 1000));
-        return `${hours}h ago`;
-    }
-    
-    // Less than a week
-    if (diff < 7 * 24 * 60 * 60 * 1000) {
-        const days = Math.floor(diff / (24 * 60 * 60 * 1000));
-        return `${days}d ago`;
-    }
-    
-    return date.toLocaleDateString();
-  };
 
   const navLinks = [
     { name: "Problems", href: "/problems", icon: Code2 },
@@ -406,56 +482,76 @@ const Navbar = ({ user, initialNotifications, unreadCount }: NavbarProps) => {
                     )}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-80" align="end" forceMount>
+                <DropdownMenuContent className="w-80 sm:w-[380px]" align="end" forceMount>
                   <DropdownMenuArrow />
-                  <div className="flex items-center justify-between px-4 py-2">
+                  <div className="flex items-center justify-between px-4 py-3 bg-muted/30 border-b">
                     <span className="text-sm font-semibold">Notifications</span>
                     {currentUnreadCount.total > 0 && (
-                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                      <Badge variant="secondary" className="text-[10px] h-5 px-1.5 font-normal">
                         {currentUnreadCount.total} Total
                       </Badge>
                     )}
                   </div>
-                  <DropdownMenuSeparator />
-                  <div className="max-h-[300px] overflow-y-auto">
+                  <div className="max-h-[400px] overflow-y-auto">
                     {notifications.length === 0 ? (
-                      <div className="p-4 text-center text-sm text-muted-foreground">
-                        No notifications
+                      <div className="flex flex-col items-center justify-center py-8 text-center px-4">
+                        <Bell className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                        <p className="text-sm text-muted-foreground font-medium">No notifications</p>
+                        <p className="text-xs text-muted-foreground/80 mt-1">We'll let you know when something arrives.</p>
                       </div>
                     ) : (
-                      notifications.map((notification) => (
-                        <DropdownMenuItem key={notification.id} asChild>
-                          <Link 
-                            href={notification.link} 
-                            className={`cursor-pointer flex items-start gap-3 px-4 py-3 w-full outline-none transition-colors hover:bg-accent hover:text-accent-foreground relative ${!notification.clicked ? 'bg-blue-50/50 dark:bg-blue-900/10' : ''}`}
-                          >
-                            {getNotificationIcon(notification.type)}
-                            <div className="flex-1 min-w-0">
-                                <p className="text-sm leading-tight break-words">{notification.message}</p>
-                                {notification.createdAt && (
-                                    <p className="text-[10px] text-muted-foreground mt-1">
-                                        {formatNotificationDate(notification.createdAt)}
-                                    </p>
-                                )}
-                            </div>
-                            {!notification.clicked && (
-                              <span className="absolute right-2 top-1/2 -translate-y-1/2 w-2 h-2 bg-blue-500 rounded-full" />
-                            )}
-                          </Link>
-                        </DropdownMenuItem>
-                      ))
+                      <div className="flex flex-col">
+                        {notifications.map((notification) => (
+                          <DropdownMenuItem key={notification.id} asChild className="p-0 focus:bg-transparent cursor-pointer">
+                            <Link 
+                              href={notification.link} 
+                              className={`
+                                group relative flex items-start gap-3 px-4 py-3.5 w-full outline-none transition-colors 
+                                border-b border-border/40 last:border-0 cursor-pointer
+                                ${!notification.clicked 
+                                  ? 'bg-blue-50/60 dark:bg-blue-900/20 hover:bg-blue-100/80 dark:hover:bg-blue-900/40' 
+                                  : 'bg-background hover:bg-accent dark:hover:bg-muted/50'
+                                }
+                              `}
+                            >
+                              {getNotificationIcon(notification.type)}
+                              <div className="flex-1 min-w-0 space-y-1 pr-2">
+                                  <p className={`text-sm leading-snug break-words ${!notification.clicked ? 'font-medium text-foreground' : 'text-muted-foreground'}`}>
+                                    {notification.message}
+                                  </p>
+                                  {notification.createdAt && (
+                                      <p className="text-[11px] text-muted-foreground/80 flex items-center gap-1">
+                                          {formatNotificationDate(notification.createdAt)}
+                                      </p>
+                                  )}
+                              </div>
+                              {!notification.clicked && (
+                                <div className="flex h-full items-center justify-center pt-1">
+                                    <span className="w-2 h-2 bg-blue-500 rounded-full shadow-sm ring-2 ring-background flex-shrink-0" />
+                                </div>
+                              )}
+                            </Link>
+                          </DropdownMenuItem>
+                        ))}
+                      </div>
                     )}
                     {hasNextPage && (
-                      <div className="p-2 flex justify-center border-t border-border sticky bottom-0 bg-popover">
+                      <div className="p-3 flex justify-center border-t border-border/40 bg-background/50">
                         <Button 
                           variant="ghost" 
                           size="sm" 
                           onClick={loadMoreNotifications}
                           disabled={isFetchingNextPage}
-                          className="w-full text-xs h-8"
+                          className="w-full text-xs h-8 font-medium text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all"
                         >
-                          {isFetchingNextPage && <Spinner className="h-3 w-3 mr-2"/>}
-                          Load More
+                          {isFetchingNextPage ? (
+                            <>
+                              <Spinner className="h-3 w-3 mr-2"/>
+                              Loading...
+                            </>
+                          ) : (
+                            "Load older notifications"
+                          )}
                         </Button>
                       </div>
                     )}

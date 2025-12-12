@@ -52,6 +52,9 @@ export default async function MembersPage({ params, searchParams }: PageProps) {
       );
   }
 
+  const currentOrg = user.organizations.find(o => o.slug === slug);
+  const currentRole = currentOrg?.role;
+
   const data = await getMembers(slug, page, size);
 
   if (!data) {
@@ -64,7 +67,7 @@ export default async function MembersPage({ params, searchParams }: PageProps) {
 
   return (
     <Suspense fallback={<div>Loading members...</div>}>
-      <MembersView data={data} />
+      <MembersView data={data} currentUserRole={currentRole} />
     </Suspense>
   );
 }

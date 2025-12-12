@@ -38,15 +38,15 @@ export interface OrganizationMember {
     username: string;
     email: string;
     role: string;
+    membershipId: number;
 }
 
 export interface OrganizationInvitation {
     id: number;
-    username: string; // The username of the inviter or the invitee? The JSON says "username": "parthokr", "email": "parthokr@gmail.com". It looks like the invitee's details if they exist, or maybe the inviter. Given "code" and "accepted", it's the invitation object.
-    email: string;
+    username: string; // invitee's username
+    email: string; // invitee's email
     code: string;
-    accepted: boolean;
-    revoked: boolean;
-    invitationDate: string;
+    accepted: boolean; // true if the invitation was accepted, false if it was revoked
+    revoked: boolean; // true if the invitation was revoked, false if it was accepted
+    invitationDate: string; // the date the invitation was sent 
 }
-

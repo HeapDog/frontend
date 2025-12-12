@@ -36,21 +36,56 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ChevronLeft, ChevronRight, MoreHorizontal, UserCog } from "lucide-react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { useRouter, usePathname, useSearchParams, useParams } from "next/navigation";
 import { useState } from "react";
+import { toast } from "sonner";
 
 interface MembersViewProps {
   data: PaginatedData<OrganizationMember>;
+  currentUserRole?: string;
 }
 
 function ChangeRoleDialog({ member }: { member: OrganizationMember }) {
   const [role, setRole] = useState(member.role);
   const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const params = useParams();
+  const slug = params.slug as string;
+  const router = useRouter();
 
-  const handleSave = () => {
-    console.log(`Changing role for ${member.username} to ${role}`);
-    setOpen(false);
+  const handleSave = async () => {
+    if (role === member.role) {
+      setOpen(false);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/organizations/${slug}/membership/${member.membershipId}/role`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ role })
+      });
+
+      if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.message || "Failed to update role");
+      }
+
+      toast.success("Role updated successfully");
+      setOpen(false);
+      router.refresh();
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "Failed to update role");
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const availableRoles = ["ADMIN", "STAFF", "MEMBER"].filter(r => r !== member.role);
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -68,29 +103,33 @@ function ChangeRoleDialog({ member }: { member: OrganizationMember }) {
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-          <Select value={role} onValueChange={setRole}>
+          <Select value={role === member.role ? "" : role} onValueChange={setRole}>
             <SelectTrigger>
-              <SelectValue placeholder="Select a role" />
+              <SelectValue placeholder={member.role} />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="ADMIN">ADMIN</SelectItem>
-              <SelectItem value="STAFF">STAFF</SelectItem>
-              <SelectItem value="MEMBER">MEMBER</SelectItem>
+              {availableRoles.map((r) => (
+                <SelectItem key={r} value={r}>
+                  {r}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
             Cancel
           </Button>
-          <Button onClick={handleSave}>Save changes</Button>
+          <Button onClick={handleSave} disabled={loading || role === member.role}>
+            {loading ? "Saving..." : "Save changes"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 }
 
-export function MembersView({ data }: MembersViewProps) {
+export function MembersView({ data, currentUserRole }: MembersViewProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -218,7 +257,9 @@ export function MembersView({ data }: MembersViewProps) {
                       </span>
                   </TableCell>
                   <TableCell>
-                    <ChangeRoleDialog member={member} />
+                    {currentUserRole === 'ADMIN' && (
+                        <ChangeRoleDialog member={member} />
+                    )}
                   </TableCell>
                 </TableRow>
               ))}
