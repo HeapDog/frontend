@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: Dockerfile
       args:
-        - NEXT_PUBLIC_SSE_SERVER=${NEXT_PUBLIC_SSE_SERVER}
+        NEXT_PUBLIC_SSE_SERVER: ${NEXT_PUBLIC_SSE_SERVER}
     container_name: frontend-dev
     ports:
       - "3000:3000"

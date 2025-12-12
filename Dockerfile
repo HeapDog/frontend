@@ -7,6 +7,8 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
+ARG NEXT_PUBLIC_SSE_SERVER
+ENV NEXT_PUBLIC_SSE_SERVER=${NEXT_PUBLIC_SSE_SERVER}
 RUN npm run build
 
 
