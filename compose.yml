@@ -18,6 +18,14 @@ services:
       - heapdog-network
     restart: unless-stopped
 
+  redis:
+    image: redis:8.4.0-alpine
+    container_name: heapdog-redis
+    command: redis-server --requirepass heapdog
+    networks:
+      - heapdog-network
+    restart: unless-stopped
+
 networks:
   heapdog-network:
     external: true
