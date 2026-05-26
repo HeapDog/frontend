@@ -92,6 +92,7 @@ interface UserSuggestion {
     username: string;
     name: string;
     email: string;
+    pictureUrl?: string | null;
     invitationStatus?: InvitationStatus;
 }
 
@@ -274,6 +275,7 @@ export function InvitationsView({ organizationSlug, initialData, currentUserRole
                           username: u.username || "",
                           name: name,
                           email: u.email || "",
+                          pictureUrl: u.pictureUrl || null,
                       };
                   });
                   
@@ -567,7 +569,7 @@ export function InvitationsView({ organizationSlug, initialData, currentUserRole
                                           
                                           <div className="flex items-center gap-3 relative z-10 overflow-hidden">
                                             <Avatar className="h-9 w-9 ring-2 ring-background shadow-xs shrink-0">
-                                              <AvatarImage src={`https://avatar.vercel.sh/${selectedUser.username}`} />
+                                              <AvatarImage src={selectedUser.pictureUrl || `https://avatar.vercel.sh/${selectedUser.username}`} />
                                               <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/20 text-primary font-bold text-[10px]">
                                                 {selectedUser.username.substring(0,2).toUpperCase()}
                                               </AvatarFallback>
@@ -717,7 +719,7 @@ export function InvitationsView({ organizationSlug, initialData, currentUserRole
                                                               onMouseEnter={() => !isNotSelectable && setFocusedIndex(index)}
                                                           >
                                                               <Avatar className="h-8 w-8 shrink-0 shadow-xs">
-                                                                  <AvatarImage src={`https://avatar.vercel.sh/${user.username}`} />
+                                                                  <AvatarImage src={user.pictureUrl || `https://avatar.vercel.sh/${user.username}`} />
                                                                   <AvatarFallback className="bg-gradient-to-br from-primary/10 to-primary/20 text-primary font-semibold text-xs">
                                                                       {user.username.substring(0,2).toUpperCase()}
                                                                   </AvatarFallback>
