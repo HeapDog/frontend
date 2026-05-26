@@ -3,15 +3,20 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: frontend-prod
+      args:
+        NEXT_PUBLIC_SSE_SERVER: ${NEXT_PUBLIC_SSE_SERVER}
+        NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
+    container_name: heapdog-frontend
     ports:
       - "5050:5050"
+    env_file:
+      - .env
     environment:
       - PORT=5050
       - NODE_ENV=production
-      - SPRING_BOOT_API_URL=${SPRING_BOOT_API_URL}
     networks:
       - heapdog-network
+    restart: unless-stopped
 
 networks:
   heapdog-network:

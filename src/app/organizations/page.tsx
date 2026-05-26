@@ -1,16 +1,18 @@
-import { requireUser } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
+import { getUserOrganizations } from "@/lib/organizations";
 import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 
 export default async function OrganizationsPage() {
-  const user = await requireUser();
+  const user = await requireAuth();
+  const organizations = await getUserOrganizations();
 
-  if (user.organizations && user.organizations.length > 0) {
-     const currentOrg = user.organizations.find(org => org.id === user.currentOrganizationId) || user.organizations[0];
+  if (organizations && organizations.length > 0) {
+     const currentOrg = organizations.find(org => org.slug === user.currentOrganization?.slug) || organizations[0];
      // Redirect to the dynamic slug route
-     redirect(`/organizations/${currentOrg.slug}/basic-info`);
+     redirect(`/organizations/${currentOrg.slug}/dashboard/basic-info`);
   }
 
   return (

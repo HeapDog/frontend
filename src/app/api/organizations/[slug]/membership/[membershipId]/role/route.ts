@@ -1,16 +1,15 @@
 import { BackendClient } from "@/lib/backend-client";
-import { cookies } from "next/headers";
+import { getValidAccessToken } from "@/lib/token-utils";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function PATCH(
+async function handleRoleUpdate(
   req: NextRequest,
-  { params }: { params: Promise<{ slug: string; membershipId: string }> }
+  params: Promise<{ slug: string; membershipId: string }>
 ) {
   const { slug, membershipId } = await params;
   
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
+    const token = await getValidAccessToken();
 
     if (!token) {
       return NextResponse.json(
@@ -20,10 +19,20 @@ export async function PATCH(
     }
 
     const body = await req.json();
+    const roleValue = body.role || body.newRole;
 
-    const response = await BackendClient.patch<any>(
-      `/organizations/${slug}/membership/${membershipId}/role`,
-      body,
+    if (!roleValue) {
+      return NextResponse.json(
+        { error: "Bad Request: role or newRole is required" },
+        { status: 400 }
+      );
+    }
+
+    // The backend expects PUT /organizations/{slug}/memberships/{membershipId}
+    // with body { "role": "ROLE" }
+    const response = await BackendClient.put<any>(
+      `/organizations/${slug}/memberships/${membershipId}`,
+      { role: roleValue },
       {
         headers: {
           Authorization: `Bearer ${token}`,
@@ -41,4 +50,18 @@ export async function PATCH(
       { status: status }
     );
   }
+}
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ slug: string; membershipId: string }> }
+) {
+  return handleRoleUpdate(req, params);
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ slug: string; membershipId: string }> }
+) {
+  return handleRoleUpdate(req, params);
 }

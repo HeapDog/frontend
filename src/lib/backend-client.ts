@@ -1,4 +1,6 @@
 import { ApiErrorResponse, ApiResponse } from "./types/api";
+import { refreshTokens, setAuthCookies } from "./token-utils";
+import { cookies } from "next/headers";
 
 const BASE_URL = process.env.SPRING_BOOT_API_URL || "http://localhost:8080";
 
@@ -8,6 +10,7 @@ interface FetchOptions extends RequestInit {
 
 export class BackendClient {
     static async fetch<T>(endpoint: string, options: FetchOptions = {}): Promise<ApiResponse<T>> {
+        console.log("Fetching from backend:", endpoint);
         const url = `${BASE_URL}${endpoint}`;
         const headers = {
             "Content-Type": "application/json",
@@ -21,7 +24,37 @@ export class BackendClient {
         };
 
         try {
-            const res = await fetch(url, config);
+            let res = await fetch(url, config);
+
+            // Handle 401 Unauthorized - Refresh Token
+            if (res.status === 401) {
+                console.log("Received 401 from backend, attempting to refresh token...");
+                const newTokens = await refreshTokens();
+
+                if (newTokens) {
+                    console.log("Token refresh successful, updating cookies and retrying request...");
+                    // Update cookies
+                    await setAuthCookies(newTokens);
+
+                    // Update Authorization header with new access token
+                    const newHeaders = {
+                        ...headers,
+                        Authorization: `Bearer ${newTokens.access_token}`,
+                    };
+
+                    const newConfig = {
+                        ...config,
+                        headers: newHeaders,
+                    };
+
+                    // Retry the request
+                    res = await fetch(url, newConfig);
+                } else {
+                    console.error("Token refresh failed or no refresh token available.");
+                    // If refresh fails, we might want to clear cookies, but we can't easily do that here cleanly for all contexts.
+                    // The caller will receive the 401 error below.
+                }
+            }
             
             // Handle empty response body
             const text = await res.text();

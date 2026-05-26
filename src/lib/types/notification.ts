@@ -5,7 +5,8 @@ export type NotificationType =
     | "ERROR" 
     | "INVITATION_ACCEPTED" 
     | "INVITATION_SENT"
-    | "ORGANIZATION_MEMBER_ROLE_UPDATED";
+    | "ORGANIZATION_MEMBER_ROLE_UPDATED"
+    | "DEFAULT_ORGANIZATION_UPDATED";
 
 export interface Notification {
     id: number;
@@ -15,7 +16,7 @@ export interface Notification {
     clicked: boolean;
     type: NotificationType;
     createdAt: string;
-    userId?: number;
+    userId?: string;
 }
 
 export interface NotificationEvent {

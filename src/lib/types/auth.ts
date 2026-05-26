@@ -20,7 +20,7 @@ export interface SignupResponse {
 }
 
 export interface VerifyEmailRequest {
-  userId: number;
+  userId: string;
   otp: string;
 }
 

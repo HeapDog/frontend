@@ -1,5 +1,5 @@
 import { BackendClient } from "@/lib/backend-client";
-import { cookies } from "next/headers";
+import { getValidAccessToken } from "@/lib/token-utils";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -14,8 +14,7 @@ export async function GET(req: NextRequest) {
             );
         }
 
-        const cookieStore = await cookies();
-        const token = cookieStore.get("auth_token")?.value;
+        const token = await getValidAccessToken();
 
         if (!token) {
             return NextResponse.json(
@@ -23,6 +22,8 @@ export async function GET(req: NextRequest) {
                 { status: 401 }
             );
         }
+        
+        // Backend expects just slug query param
         const response = await BackendClient.fetch<any>(`/organizations/check-slug?slug=${slug}`, {
             method: "GET",
             headers: {
@@ -30,6 +31,7 @@ export async function GET(req: NextRequest) {
             },
         });
 
+        // Response is { data: { isAvailable: boolean }, ... }
         return NextResponse.json(response);
     } catch (error: any) {
         console.error("Check slug error:", error);

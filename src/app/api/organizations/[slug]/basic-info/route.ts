@@ -1,16 +1,16 @@
 import { BackendClient } from "@/lib/backend-client";
-import { cookies } from "next/headers";
+import { removeEmptyFields } from "@/lib/utils";
+import { getValidAccessToken } from "@/lib/token-utils";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function PATCH(
+export async function PUT(
     req: NextRequest,
     { params }: { params: Promise<{ slug: string }> }
 ) {
     try {
         const { slug } = await params;
         const body = await req.json();
-        const cookieStore = await cookies();
-        const token = cookieStore.get("auth_token")?.value;
+        const token = await getValidAccessToken();
 
         if (!token) {
             return NextResponse.json(
@@ -19,7 +19,16 @@ export async function PATCH(
             );
         }
 
-        const response = await BackendClient.patch<any>(`/organizations/${slug}/basic-info`, body, {
+        // Remove empty fields while keeping mandatory name/slug
+        const { name, slug: bodySlug, ...rest } = body;
+        const cleanedBody = removeEmptyFields(rest);
+        const payload = {
+            name,
+            slug: bodySlug,
+            ...cleanedBody,
+        };
+
+        const response = await BackendClient.put<any>(`/organizations/${slug}/basic-info`, payload, {
             headers: {
                 Authorization: `Bearer ${token}`,
             }
@@ -32,4 +41,3 @@ export async function PATCH(
         return NextResponse.json(error, { status });
     }
 }
-

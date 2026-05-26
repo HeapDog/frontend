@@ -1,11 +1,10 @@
 import { BackendClient } from "@/lib/backend-client";
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
+import { refreshTokens, setAuthCookies, getValidAccessToken } from "@/lib/token-utils";
 
 export async function POST(request: Request) {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
+    const token = await getValidAccessToken();
 
     if (!token) {
       return NextResponse.json(
@@ -25,14 +24,20 @@ export async function POST(request: Request) {
     }
 
     const response = await BackendClient.post(
-      `/organizations/${slug}/invitations/accept`,
-      { code }, // Send code in body as requested
+      `/organizations/${slug}/invitations/accept?code=${code}`,
+      {}, 
       {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       }
     );
+
+    // Refresh tokens to update the user's session with new organization access
+    const newTokens = await refreshTokens();
+    if (newTokens) {
+      await setAuthCookies(newTokens);
+    }
 
     return NextResponse.json(response);
   } catch (error: any) {
@@ -46,4 +51,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

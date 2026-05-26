@@ -1,12 +1,11 @@
 import { BackendClient } from "@/lib/backend-client";
-import { cookies } from "next/headers";
 import { NextRequest, NextResponse } from "next/server";
+import { getValidAccessToken } from "@/lib/token-utils";
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
+    const token = await getValidAccessToken();
 
     if (!token) {
       return NextResponse.json(
@@ -37,5 +36,44 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function GET(req: NextRequest) {
+  try {
+    const searchParams = req.nextUrl.searchParams;
+    const query = searchParams.get("query");
 
+    if (!query) {
+       return NextResponse.json({ data: [] });
+    }
 
+    const token = await getValidAccessToken();
+
+    if (!token) {
+      return NextResponse.json(
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Proxy the search to the backend
+    const response = await BackendClient.get<any>(
+      `/users?query=${encodeURIComponent(query)}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    return NextResponse.json(response);
+
+  } catch (error: any) {
+    console.error("User search error:", error);
+    const status = error.status || 500;
+    return NextResponse.json(
+       // Return empty list on error to avoid breaking UI, or error object?
+       // Let's return error object for debugging
+       { error: error.message || "Search failed", data: [] }, 
+       { status }
+    );
+  }
+}

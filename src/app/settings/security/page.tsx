@@ -1,8 +1,8 @@
-import { requireUser } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import { SecurityForm } from "./security-form";
 
 export default async function SettingsSecurityPage() {
-  await requireUser();
+  await requireAuth();
 
   return <SecurityForm />;
 }
