@@ -3,15 +3,31 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: frontend-prod
+      target: ${DOCKER_BUILD_TARGET:-runner}
+      args:
+        NEXT_PUBLIC_SSE_SERVER: ${NEXT_PUBLIC_SSE_SERVER}
+        NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL}
+        NEXT_PUBLIC_APP_ENV: ${NEXT_PUBLIC_APP_ENV:-development}
+    container_name: heapdog-frontend
     ports:
-      - "5050:5050"
+      - "${PORT:-5050}:${PORT:-5050}"
+    env_file:
+      - .env
     environment:
-      - PORT=5050
-      - NODE_ENV=production
-      - SPRING_BOOT_API_URL=${SPRING_BOOT_API_URL}
+      - PORT=${PORT:-5050}
+      - NODE_ENV=${NODE_ENV:-production}
+      - NEXT_PUBLIC_APP_ENV=${NEXT_PUBLIC_APP_ENV:-development}
     networks:
       - heapdog-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.4.0-alpine
+    container_name: heapdog-redis
+    command: redis-server --requirepass heapdog
+    networks:
+      - heapdog-network
+    restart: unless-stopped
 
 networks:
   heapdog-network:

@@ -1,12 +1,11 @@
 import { BackendClient } from "@/lib/backend-client";
-import { cookies } from "next/headers";
+import { getValidAccessToken } from "@/lib/token-utils";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function PATCH(req: NextRequest) {
     try {
         const body = await req.json();
-        const cookieStore = await cookies();
-        const token = cookieStore.get("auth_token")?.value;
+        const token = await getValidAccessToken();
 
         if (!token) {
             return NextResponse.json(
@@ -15,7 +14,7 @@ export async function PATCH(req: NextRequest) {
             );
         }
 
-        const response = await BackendClient.patch<any>("/organizations/switch", body, {
+        const response = await BackendClient.patch<any>("/users/me/default-organization", body, {
             headers: {
                 Authorization: `Bearer ${token}`,
             }

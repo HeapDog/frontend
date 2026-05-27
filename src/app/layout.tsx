@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
+import Navbar from "@/components/navbar";
 import { ThemeProvider } from "@/components/theme-provider";
 import NextTopLoader from 'nextjs-toploader';
-import { SplashScreen } from "@/components/SplashScreen";
+import { SplashScreen } from "@/components/splash-screen";
 import Providers from "./providers";
 import { getCurrentUser } from "@/lib/auth";
+import { getUserOrganizations } from "@/lib/organizations";
 import { Toaster } from "@/components/ui/sonner";
 import { getNotifications, getUnreadCount } from "@/lib/notifications";
+import DevIndicator from "@/components/dev-indicator";
+
+export const dynamic = "force-dynamic";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -31,14 +35,17 @@ export default async function RootLayout({
     children: React.ReactNode;
 }>) {
     const user = await getCurrentUser();
-    const initialNotifications = user ? await getNotifications() : null;
-    const unreadCountData = user ? await getUnreadCount() : { unread: 0, total: 0 };
+    // Only fetch organizations if we have a user
+    const organizations = user ? await getUserOrganizations() : [];
+    
+    // const initialNotifications = user ? await getNotifications() : null;
+    // const unreadCountData = user ? await getUnreadCount() : { unread: 0, total: 0 };
 
     return (
         <html lang="en" suppressHydrationWarning>
             <Providers>
                 <body
-                    className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground min-h-screen`}
+                    className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground flex flex-col h-svh overflow-hidden`}
                 >
                     <NextTopLoader
                         color="var(--primary)"
@@ -60,11 +67,19 @@ export default async function RootLayout({
                         enableSystem
                     >
                         <SplashScreen />
-                        <Navbar user={user} initialNotifications={initialNotifications} unreadCount={unreadCountData} />
-                        <main className="pt-16 min-h-screen bg-background">
-                            {children}
+                        <Navbar 
+                            user={user} 
+                            organizations={organizations}
+                            initialNotifications={null} 
+                            unreadCount={{ unread: 0, total: 0 }} 
+                        />
+                        <main className="pt-16 flex-1 min-h-0 flex flex-col overflow-hidden bg-background">
+                            <div className="flex-1 min-h-0 flex flex-col overflow-y-auto">
+                                {children}
+                            </div>
                         </main>
                         <Toaster />
+                        <DevIndicator />
                     </ThemeProvider>
                 </body>
             </Providers>

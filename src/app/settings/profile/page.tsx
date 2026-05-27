@@ -1,8 +1,8 @@
-import { requireUser } from "@/lib/auth";
+import { requireAuth } from "@/lib/auth";
 import { ProfileForm } from "./profile-form";
 
 export default async function SettingsProfilePage() {
-  const user = await requireUser();
+  const user = await requireAuth();
 
   return (
     <div className="space-y-6">

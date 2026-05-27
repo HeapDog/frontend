@@ -16,33 +16,51 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Spinner } from "@/components/ui/spinner"
-import { Building2, Globe, Mail, Phone, MapPin, AlignLeft, Link as LinkIcon, Check, X } from "lucide-react"
+import { Building2, Globe, Mail, Phone, MapPin, AlignLeft, Link as LinkIcon, Check, X, Info } from "lucide-react"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
 import { useEffect, useState } from "react"
 import { useDebounce } from "use-debounce"
 
 export const organizationFormSchema = z.object({
-  name: z.string().min(2, {
+  name: z.string().trim().min(2, {
     message: "Name must be at least 2 characters.",
+  }).max(50, {
+    message: "Name can be at most 50 characters",
   }),
-  slug: z.string().min(2, {
+  slug: z.string().trim().min(2, {
     message: "Slug must be at least 2 characters.",
+  }).max(50, {
+    message: "Slug can be at most 50 characters",
   }).regex(/^[a-z0-9-]+$/, {
     message: "Slug must contain only lowercase letters, numbers, and hyphens.",
   }),
-  description: z.string().max(1000, {
-    message: "Description cannot exceed 1000 characters.",
+  description: z.string().max(1024, {
+    message: "Description can be at most 1024 characters",
   }).optional().or(z.literal("")),
-  email: z.string().email({ message: "Invalid email address" }).max(500, {
-    message: "Email cannot exceed 500 characters.",
+  email: z.string().email({ message: "Invalid email address" }).min(10, {
+    message: "Email must be between 10 and 500 characters",
+  }).max(500, {
+    message: "Email must be between 10 and 500 characters",
   }).optional().or(z.literal("")),
-  website: z.string().url({ message: "Invalid URL" }).max(500, {
-    message: "Website cannot exceed 500 characters.",
+  website: z.string().url({ message: "Invalid URL" }).min(10, {
+    message: "Website must be between 10 and 500 characters",
+  }).max(500, {
+    message: "Website must be between 10 and 500 characters",
   }).optional().or(z.literal("")),
-  address: z.string().max(1000, {
-    message: "Address cannot exceed 1000 characters.",
+  address: z.string().min(10, {
+    message: "Address must be between 10 and 500 characters",
+  }).max(500, {
+    message: "Address must be between 10 and 500 characters",
   }).optional().or(z.literal("")),
-  phone: z.string().max(20, {
-    message: "Phone number cannot exceed 20 characters.",
+  phone: z.string().min(10, {
+    message: "Phone must be between 10 and 15 characters",
+  }).max(15, {
+    message: "Phone must be between 10 and 15 characters",
   }).optional().or(z.literal("")),
 })
 
@@ -67,6 +85,14 @@ export function OrganizationForm({
   checkSlugAvailability,
   readOnly = false
 }: OrganizationFormProps) {
+  // Some browser extensions (password managers, etc.) mutate <input> DOM before React hydrates,
+  // which can cause hydration mismatches. We gate rendering of a few "high risk" inputs until mount.
+  const [isMounted, setIsMounted] = useState(false)
+
+  useEffect(() => {
+    setIsMounted(true)
+  }, [])
+
   const form = useForm<OrganizationFormValues>({
     resolver: zodResolver(organizationFormSchema),
     defaultValues: {
@@ -170,7 +196,7 @@ export function OrganizationForm({
                     <FormControl>
                       <Input 
                         placeholder="acme-corp" 
-                        className={`pl-9 pr-9 ${!readOnly && slugAvailable === false ? "border-destructive focus-visible:ring-destructive" : !readOnly && slugAvailable === true ? "border-green-500 focus-visible:ring-green-500" : ""}`} 
+                        className={`pl-9 pr-9 ${!readOnly && slugAvailable === false ? "border-destructive focus-visible:ring-destructive" : !readOnly && slugAvailable === true ? "border-success focus-visible:ring-success" : ""}`} 
                         {...field} 
                         disabled={mode === "update" || readOnly} 
                       />
@@ -209,13 +235,13 @@ export function OrganizationForm({
                 <FormControl>
                     <Textarea
                     placeholder="Brief description of your organization"
-                    className="resize-none pl-9 min-h-[80px]"
+                    className="resize-none pl-9 min-h-[80px] max-h-[200px] overflow-y-auto whitespace-pre-wrap break-all"
                     {...field}
                     />
                 </FormControl>
               </div>
                 <FormDescription>
-                  Optional. Max 1000 characters.
+                  Optional. Max 1024 characters.
                 </FormDescription>
               </FormItem>
             )}
@@ -231,11 +257,29 @@ export function OrganizationForm({
                 <div className="relative">
                     <Mail className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <FormControl>
-                    <Input placeholder="contact@acme.com" type="email" className="pl-9" {...field} />
+                    {isMounted ? (
+                      <Input
+                        placeholder="contact@acme.com"
+                        type="email"
+                        className="pl-9"
+                        autoComplete="off"
+                        data-lpignore="true"
+                        data-1p-ignore="true"
+                        data-bwignore="true"
+                        {...field}
+                      />
+                    ) : (
+                      // Avoid rendering an actual <input> during SSR/first client render to prevent
+                      // extension-injected DOM from causing hydration mismatches.
+                      <div
+                        className="h-9 w-full rounded-md border border-input bg-transparent pl-9"
+                        aria-hidden="true"
+                      />
+                    )}
                     </FormControl>
                 </div>
                 <FormDescription>
-                  Optional. Max 500 characters.
+                  Optional. 10-500 characters.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -246,15 +290,29 @@ export function OrganizationForm({
             name="website"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Website</FormLabel>
-                <div className="relative">
+                <div className="flex items-center gap-2">
+                  <FormLabel>Website</FormLabel>
+                  {field.value && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Info className="h-4 w-4 text-muted-foreground hover:text-foreground cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Changing your website may temporarily remove your verified badge until the new site is verified.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+                <div className="relative" data-org-field="website">
                     <Globe className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <FormControl>
                     <Input placeholder="https://acme.com" className="pl-9" {...field} />
                     </FormControl>
                 </div>
                 <FormDescription>
-                  Optional. Max 500 characters.
+                  Optional. 10-500 characters.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -276,7 +334,7 @@ export function OrganizationForm({
                     </FormControl>
                 </div>
                 <FormDescription>
-                  Optional. Max 20 characters.
+                  Optional. 10-15 characters.
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -295,7 +353,7 @@ export function OrganizationForm({
                     </FormControl>
                 </div>
                 <FormDescription>
-                  Optional. Max 1000 characters.
+                  Optional. 10-500 characters.
                 </FormDescription>
                 <FormMessage />
               </FormItem>

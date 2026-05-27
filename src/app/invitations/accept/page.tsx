@@ -1,7 +1,7 @@
-import { BackendClient } from "@/lib/backend-client";
-import { requireUser } from "@/lib/auth";
-import { cookies } from "next/headers";
-import { AcceptView, AcceptInvitationInfo } from "./accept-view";
+import { requireAuth } from "@/lib/auth";
+import { getValidAccessToken } from "@/lib/token-utils";
+import { getAcceptInvitationInfo } from "@/lib/invitations";
+import { AcceptInvitationView } from "@/components/invitations/accept-invitation-view";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
@@ -15,25 +15,20 @@ export default async function InvitationAcceptPage({ searchParams }: PageProps) 
     const { code, org: slug } = await searchParams;
     
     // Ensure user is logged in
-    await requireUser();
+    await requireAuth();
 
     if (!code || !slug) {
         return <ErrorState title="Invalid Invitation Link" message="The invitation link is missing required information (code or organization)." />;
     }
 
     try {
-        const cookieStore = await cookies();
-        const token = cookieStore.get("auth_token")?.value;
+        const token = await getValidAccessToken();
+        if (!token) {
+            return <ErrorState title="Unauthorized" message="Please sign in to accept the invitation." />;
+        }
 
-        // We need to fetch the info about the invitation to display it
-        const response = await BackendClient.get<AcceptInvitationInfo>(
-             `/organizations/${slug}/invitations/accept-info?code=${code}`,
-             { 
-                headers: { Authorization: `Bearer ${token}` }
-             }
-        );
-        
-        return <AcceptView info={response.data} slug={slug} code={code} />;
+        const info = await getAcceptInvitationInfo(slug, code, token);
+        return <AcceptInvitationView info={info} slug={slug} code={code} />;
     } catch (error: any) {
         const message = error?.message || "We couldn't find the invitation you're looking for.";
         const title = error?.status === 404 ? "Invitation Not Found" : 
@@ -63,4 +58,3 @@ function ErrorState({ title, message }: { title: string, message: string }) {
         </div>
     );
 }
-

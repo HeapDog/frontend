@@ -1,11 +1,11 @@
 import { BackendClient } from "./backend-client";
 import { NotificationResponse, UnreadCountResponse } from "./types";
-import { cookies } from "next/headers";
+import { getValidAccessToken } from "./token-utils";
 
 export async function getNotifications(page: number = 1, size: number = 10): Promise<NotificationResponse | null> {
+  return null;
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
+    const token = await getValidAccessToken();
 
     if (!token) {
       return null;
@@ -25,9 +25,9 @@ export async function getNotifications(page: number = 1, size: number = 10): Pro
 }
 
 export async function getUnreadCount(): Promise<UnreadCountResponse> {
+  return { unread: 0, total: 0 };
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
+    const token = await getValidAccessToken();
 
     if (!token) {
       return { unread: 0, total: 0 };

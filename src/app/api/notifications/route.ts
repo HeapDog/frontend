@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { BackendClient } from "@/lib/backend-client";
-import { cookies } from "next/headers";
+import { getValidAccessToken } from "@/lib/token-utils";
 
 export async function GET(req: NextRequest) {
+
   const searchParams = req.nextUrl.searchParams;
   const page = searchParams.get("page") || "1";
   const size = searchParams.get("size") || "10";
 
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get("auth_token")?.value;
+    const token = await getValidAccessToken();
 
     if (!token) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
