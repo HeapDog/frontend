@@ -29,6 +29,7 @@ export async function GET(request: NextRequest) {
   }
 
   const authServiceUrl = process.env.AUTH_SERVICE_URL;
+  const authServiceInternalUrl = process.env.AUTH_SERVICE_INTERNAL_URL || authServiceUrl;
   const clientId = process.env.NEXTJS_FRONTEND_CLIENT_ID;
   const clientSecret = process.env.NEXTJS_FRONTEND_CLIENT_SECRET;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
@@ -43,7 +44,7 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const tokenUrl = `${authServiceUrl}/realms/heapdog/protocol/openid-connect/token`;
+  const tokenUrl = `${authServiceInternalUrl}/realms/heapdog/protocol/openid-connect/token`;
   const redirectUri = `${baseUrl}/oauth2/callback`;
 
   // Basic Auth Header

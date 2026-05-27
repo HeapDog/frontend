@@ -41,12 +41,13 @@ class ServiceTokenManager {
     const issuer = process.env.JWT_ISSUER_URI;
     const clientId = process.env.NEXTJS_BFF_CLIENT_ID;
     const clientSecret = process.env.NEXTJS_BFF_CLIENT_SECRET;
+    const internalUrl = process.env.KEYCLOAK_INTERNAL_URL || issuer;
 
     if (!issuer || !clientId || !clientSecret) {
       throw new Error("Missing JWT issuer or client credentials in environment variables.");
     }
 
-    const tokenEndpoint = `${issuer}/oauth2/token`;
+    const tokenEndpoint = `${internalUrl}/oauth2/token`;
     console.log("Token endpoint:", tokenEndpoint);
     console.log("Client ID:", clientId);
     console.log("Client secret:", clientSecret);
