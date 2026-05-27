@@ -10,6 +10,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getUserOrganizations } from "@/lib/organizations";
 import { Toaster } from "@/components/ui/sonner";
 import { getNotifications, getUnreadCount } from "@/lib/notifications";
+import DevIndicator from "@/components/dev-indicator";
 
 export const dynamic = "force-dynamic";
 
@@ -78,6 +79,7 @@ export default async function RootLayout({
                             </div>
                         </main>
                         <Toaster />
+                        <DevIndicator />
                     </ThemeProvider>
                 </body>
             </Providers>
