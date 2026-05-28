@@ -5,7 +5,6 @@ import { getUserOrganizations } from "@/lib/organizations";
 import { getStoredIdentity, getValidAccessToken } from "@/lib/token-utils";
 import { ConfirmTransferClient } from "./confirm-transfer-client";
 import { BackendClient } from "@/lib/backend-client";
-import { PaginatedData } from "@/lib/types/api";
 import { OrganizationMembership } from "@/lib/types/organization";
 
 interface PageProps {
@@ -58,20 +57,16 @@ export default async function ConfirmTransferPage({ params, searchParams }: Page
   try {
     const token = await getValidAccessToken();
     if (token) {
-      // TODO: Fetching paginated memberships and searching linearly is inefficient for large organizations.
-      // We should create a dedicated backend endpoint to fetch a single membership by memberId/userId
-      // (e.g., GET /organizations/{slug}/memberships/{memberId}) to optimize this check.
-      const response = await BackendClient.get<PaginatedData<OrganizationMembership>>(
-        `/organizations/${slug}/memberships?page=1&size=100`,
+      const response = await BackendClient.get<OrganizationMembership>(
+        `/organizations/${slug}/memberships?memberId=${selectedMemberId}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
         }
       );
-      const memberships = response.data?.contents || [];
-      const matched = memberships.find((m) => m.userId === selectedMemberId);
-      if (matched) {
+      const matched = response.data;
+      if (matched && matched.userId === selectedMemberId) {
         selectedMember = {
           id: matched.userId,
           username: matched.user?.username || "Unknown",
