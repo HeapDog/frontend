@@ -2,8 +2,11 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { requireAuth } from "@/lib/auth";
 import { getUserOrganizations } from "@/lib/organizations";
-import { getStoredIdentity } from "@/lib/token-utils";
+import { getStoredIdentity, getValidAccessToken } from "@/lib/token-utils";
 import { ConfirmTransferClient } from "./confirm-transfer-client";
+import { BackendClient } from "@/lib/backend-client";
+import { PaginatedData } from "@/lib/types/api";
+import { OrganizationMembership } from "@/lib/types/organization";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -53,18 +56,30 @@ export default async function ConfirmTransferPage({ params, searchParams }: Page
 
   let selectedMember = null;
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-    const response = await fetch(`${baseUrl}/api/organizations/${slug}/memberships`, {
-      headers: {
-        Cookie: `session_id=${sessionId}`,
-      },
-    });
-    const data = await response.json();
-    if (response.ok && data.contents) {
-      selectedMember = data.contents.find((m: any) => m.id === selectedMemberId) || null;
+    const token = await getValidAccessToken();
+    if (token) {
+      const response = await BackendClient.get<PaginatedData<OrganizationMembership>>(
+        `/organizations/${slug}/memberships?page=1&size=100`,
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      const memberships = response.data?.contents || [];
+      const matched = memberships.find((m) => m.userId === selectedMemberId);
+      if (matched) {
+        selectedMember = {
+          id: matched.userId,
+          username: matched.user?.username || "Unknown",
+          email: matched.user?.email || "",
+          firstName: matched.user?.firstName || "",
+          lastName: matched.user?.lastName || "",
+        };
+      }
     }
   } catch (error) {
-    console.error("Error fetching selected member details:", error);
+    console.error("Error fetching selected member details directly from backend:", error);
   }
 
   if (!selectedMember) {
