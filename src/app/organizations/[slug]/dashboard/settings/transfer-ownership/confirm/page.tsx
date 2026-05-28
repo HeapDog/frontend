@@ -58,6 +58,9 @@ export default async function ConfirmTransferPage({ params, searchParams }: Page
   try {
     const token = await getValidAccessToken();
     if (token) {
+      // TODO: Fetching paginated memberships and searching linearly is inefficient for large organizations.
+      // We should create a dedicated backend endpoint to fetch a single membership by memberId/userId
+      // (e.g., GET /organizations/{slug}/memberships/{memberId}) to optimize this check.
       const response = await BackendClient.get<PaginatedData<OrganizationMembership>>(
         `/organizations/${slug}/memberships?page=1&size=100`,
         {
