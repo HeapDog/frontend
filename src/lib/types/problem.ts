@@ -10,13 +10,22 @@ export interface Language {
   version: string
 }
 
+export interface UserBasicInfo {
+  id: string
+  username: string
+  email: string
+  firstName: string | null
+  lastName: string | null
+  pictureUrl: string | null
+}
+
 export interface ProblemLibrary {
   id: string
   name: string
   description: string | null
   createdAt: string
   updatedAt: string
-  createdBy: string
+  createdBy: UserBasicInfo
 }
 
 export type ProblemStatus = "PUBLISHED" | "DRAFT" | "ARCHIVED"

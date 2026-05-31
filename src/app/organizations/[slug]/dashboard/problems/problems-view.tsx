@@ -72,6 +72,7 @@ import {
   FolderInput,
   Signal,
   AlertTriangle,
+  Star,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import {
@@ -117,6 +118,7 @@ import { PROBLEM_VERSION_SORT_FIELDS } from "@/lib/table-sort"
 import { parseSortParam } from "@/lib/table-sort"
 import type { PaginationMeta } from "@/lib/types/api"
 import { useMyPermissions } from "@/hooks/use-my-permissions"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 
 type ProblemStatusValue = ProblemStatus
 
@@ -928,18 +930,66 @@ export function ProblemsView({
 
   return (
     <div className="min-w-0 flex flex-col gap-4 h-[calc(100vh-11rem)]">
-      <div className="shrink-0 space-y-1">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight">Problem Library</h1>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Select a library to browse and manage its problems.
-            </p>
+      <div className="shrink-0 space-y-4">
+        {/* Title & Library Selector */}
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-9 items-center justify-center rounded-lg bg-indigo-500/10 dark:bg-indigo-400/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.08)]">
+                <Library className="h-5 w-5" />
+              </div>
+              <h1 className="text-xl font-semibold tracking-tight">Problem Libraries</h1>
+            </div>
+
+            {librariesState.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Select
+                  value={selectValue}
+                  onValueChange={(value) => {
+                    if (value && value !== NONE_LIBRARY_VALUE) {
+                      router.push(
+                        `/organizations/${slug}/dashboard/libraries/${value}/problems`
+                      )
+                    } else {
+                      setSelectedLibraryId(value)
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-full sm:w-[220px] font-medium transition-all duration-200 border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900/50">
+                    <SelectValue placeholder="Select library" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {librariesState.map((lib) => (
+                      <SelectItem key={lib.id} value={lib.id}>
+                        {lib.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {canCreateLibrary && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9 text-muted-foreground hover:text-foreground border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900/50 rounded-md"
+                    onClick={() => {
+                      setNewLibraryName("")
+                      setNewLibraryDescription("")
+                      setIsCreateLibraryOpen(true)
+                    }}
+                    title="Create new library"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-2">
             {librariesState.length > 0 && canCreateProblem && (
-              <Button asChild>
+              <Button asChild className="shadow-xs bg-indigo-600 hover:bg-indigo-500 text-white dark:bg-indigo-600 dark:hover:bg-indigo-500 transition-all duration-200">
                 <Link href={newProblemHref}>
                   <FilePlus2 className="mr-2 h-4 w-4" />
                   New Problem
@@ -949,186 +999,236 @@ export function ProblemsView({
           </div>
         </div>
 
+        {/* Selected Library Meta Details Panel */}
+        {selectedLibrary && (
+          <div className="relative overflow-hidden rounded-xl border border-neutral-200 dark:border-neutral-800 bg-linear-to-b from-white to-neutral-50/50 dark:from-neutral-950 dark:to-neutral-950/20 p-5 shadow-xs transition-all duration-300">
+            <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 rounded-full bg-indigo-500/5 blur-3xl pointer-events-none" />
+
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between relative z-10">
+              <div className="space-y-1.5 max-w-3xl">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-lg font-semibold tracking-tight text-neutral-900 dark:text-neutral-50">
+                    {selectedLibrary.name}
+                  </h2>
+
+                  {selectedLibrary.id === currentDefaultId ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-medium text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-[0_0_10px_rgba(16,185,129,0.05)]">
+                      <Star className="h-3 w-3 fill-emerald-600 dark:fill-emerald-400" />
+                      Default Library
+                    </span>
+                  ) : (
+                    hasLibraryWrite && (
+                      <button
+                        type="button"
+                        onClick={() => setDefaultLibrary(selectedLibrary.id)}
+                        disabled={isSettingDefault}
+                        className="inline-flex items-center gap-1 rounded-full bg-neutral-100 hover:bg-indigo-500/10 hover:text-indigo-600 dark:bg-neutral-900 px-2 py-0.5 text-xs font-medium text-muted-foreground border border-neutral-200 dark:border-neutral-800 transition-all duration-200 cursor-pointer disabled:pointer-events-none disabled:opacity-50"
+                        title="Set this library as your default library"
+                      >
+                        <Star className="h-3 w-3" />
+                        {isSettingDefault ? "Setting..." : "Set as Default"}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <p className="text-sm text-neutral-600 dark:text-neutral-400 whitespace-pre-wrap leading-relaxed">
+                  {selectedLibrary.description || (
+                    <span className="text-neutral-400 dark:text-neutral-500 italic">
+                      No description provided. Click edit to add a description.
+                    </span>
+                  )}
+                </p>
+
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1 text-xs text-muted-foreground font-normal">
+                  <div className="flex items-center gap-1">
+                    <span className="font-semibold text-neutral-700 dark:text-neutral-300">
+                      {problems.length}
+                    </span>
+                    <span>{problems.length === 1 ? "problem" : "problems"}</span>
+                  </div>
+                  {selectedLibrary.createdAt && (
+                    <div className="flex items-center gap-1">
+                      <span className="text-neutral-300 dark:text-neutral-800">•</span>
+                      <span>Created {new Date(selectedLibrary.createdAt).toLocaleDateString()}</span>
+                    </div>
+                  )}
+                  {selectedLibrary.createdBy && (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-neutral-300 dark:text-neutral-800">•</span>
+                      <span>by</span>
+                      <div className="inline-flex items-center gap-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800/80 rounded-full pl-1 pr-2 py-0.5 text-xs text-neutral-800 dark:text-neutral-200 font-medium select-none shadow-[0_1px_2px_rgba(0,0,0,0.03)] hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-all duration-200">
+                        <Avatar className="h-4 w-4 rounded-full border border-white dark:border-neutral-950">
+                          {selectedLibrary.createdBy.pictureUrl ? (
+                            <AvatarImage src={selectedLibrary.createdBy.pictureUrl} alt={selectedLibrary.createdBy.username} />
+                          ) : null}
+                          <AvatarFallback className="text-[8px] bg-indigo-500/20 text-indigo-500 rounded-full font-bold flex items-center justify-center">
+                            {selectedLibrary.createdBy.firstName && selectedLibrary.createdBy.lastName
+                              ? `${selectedLibrary.createdBy.firstName[0]}${selectedLibrary.createdBy.lastName[0]}`.toUpperCase()
+                              : selectedLibrary.createdBy.username[0].toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span>
+                          {selectedLibrary.createdBy.firstName && selectedLibrary.createdBy.lastName
+                            ? `${selectedLibrary.createdBy.firstName} ${selectedLibrary.createdBy.lastName}`
+                            : selectedLibrary.createdBy.username}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {hasLibraryWrite && (
+                <div className="flex items-center gap-1.5 self-end sm:self-start">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900 border-neutral-200 dark:border-neutral-800"
+                    onClick={() => {
+                      navigator.clipboard.writeText(selectedLibrary.id).then(() => {
+                        setIsLibraryIdCopied(true)
+                        toast.success("Library ID copied to clipboard!")
+                        setTimeout(() => setIsLibraryIdCopied(false), 2000)
+                      })
+                    }}
+                    title="Copy Library ID"
+                  >
+                    {isLibraryIdCopied ? (
+                      <Check className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                    <span className="hidden md:inline ml-1">{isLibraryIdCopied ? "Copied" : "Copy ID"}</span>
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900 border-neutral-200 dark:border-neutral-800"
+                    onClick={() => {
+                      setEditLibraryName(selectedLibrary.name)
+                      setEditLibraryDescription(selectedLibrary.description || "")
+                      setIsEditLibraryOpen(true)
+                    }}
+                    title="Edit library"
+                  >
+                    <PencilLine className="h-3.5 w-3.5" />
+                    <span className="hidden md:inline ml-1">Edit</span>
+                  </Button>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={problems.length > 0}
+                          className="h-8 text-destructive border-destructive/20 hover:bg-destructive/10 hover:text-destructive dark:border-destructive/30 dark:hover:bg-destructive/20 disabled:opacity-50"
+                          onClick={() => setIsDeleteLibraryOpen(true)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span className="hidden md:inline ml-1">Delete</span>
+                        </Button>
+                      </span>
+                    </TooltipTrigger>
+                    {problems.length > 0 && (
+                      <TooltipContent side="bottom" className="max-w-[280px]">
+                        Cannot delete a library that contains problems. Move or delete the problems first.
+                      </TooltipContent>
+                    )}
+                  </Tooltip>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {librariesState.length === 0 && (
-        <div className="rounded-lg border border-dashed p-6">
-          <div className="mx-auto flex max-w-md flex-col items-center gap-2 text-center">
-            <div className="flex size-10 items-center justify-center rounded-full bg-muted">
-              <Library className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <h3 className="text-sm font-medium">No libraries yet</h3>
-            <p className="text-sm text-muted-foreground">
-              Create your first library to start organizing problems.
-            </p>
-            {canCreateLibrary && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setNewLibraryName("")
-                  setNewLibraryDescription("")
-                  setIsCreateLibraryOpen(true)
-                }}
+        <div className="flex-1 flex items-center justify-center p-4 bg-radial from-indigo-500/5 via-transparent to-transparent">
+          <motion.div 
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="relative overflow-hidden max-w-2xl w-full rounded-2xl border border-neutral-200/80 dark:border-neutral-800/80 bg-white/70 dark:bg-neutral-950/70 backdrop-blur-xl p-8 md:p-12 shadow-xl text-center space-y-6"
+          >
+            {/* Glowing radial ornament */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
+
+            <div className="flex flex-col items-center gap-4 relative z-10">
+              {/* Ultra-premium float-animated icon ring */}
+              <motion.div
+                animate={{ y: [0, -6, 0] }}
+                transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
+                className="flex size-16 items-center justify-center rounded-2xl bg-indigo-500/10 dark:bg-indigo-400/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-[0_0_20px_rgba(99,102,241,0.15)]"
               >
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Create library
-              </Button>
+                <Library className="h-8 w-8" />
+              </motion.div>
+
+              <div className="space-y-2 max-w-lg">
+                <h3 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
+                  Initialize Your Knowledge Space
+                </h3>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400 leading-relaxed">
+                  Libraries act as isolated workspaces to catalog mock questions, team interviews, and assessment blueprints. Create one now to begin your engineering journey.
+                </p>
+              </div>
+            </div>
+
+            {canCreateLibrary && (
+              <motion.div
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="inline-block relative z-10"
+              >
+                <Button
+                  type="button"
+                  size="lg"
+                  className="bg-linear-to-r from-indigo-500 to-violet-600 hover:from-indigo-600 hover:to-violet-700 text-white font-medium shadow-md shadow-indigo-500/10 border-0 transition-all duration-300"
+                  onClick={() => {
+                    setNewLibraryName("")
+                    setNewLibraryDescription("")
+                    setIsCreateLibraryOpen(true)
+                  }}
+                >
+                  <PlusCircle className="mr-2 h-5 w-5" />
+                  Create First Library
+                </Button>
+              </motion.div>
             )}
-          </div>
+
+            {/* Premium feature overview grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-8 border-t border-neutral-100 dark:border-neutral-900 text-left text-xs">
+              <div className="space-y-1.5">
+                <div className="font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-indigo-500" />
+                  Isolated Workspaces
+                </div>
+                <p className="text-muted-foreground leading-normal">Keep coding, system design, and SRE scenarios organized separately.</p>
+              </div>
+              <div className="space-y-1.5">
+                <div className="font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-indigo-500" />
+                  Version Control
+                </div>
+                <p className="text-muted-foreground leading-normal">Track versions, drafts, revisions, and roll back changes instantly.</p>
+              </div>
+              <div className="space-y-1.5">
+                <div className="font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-indigo-500" />
+                  Team Collaboration
+                </div>
+                <p className="text-muted-foreground leading-normal">Assign permissions, role-based controls, and share across your organization.</p>
+              </div>
+            </div>
+          </motion.div>
         </div>
       )}
 
       {librariesState.length > 0 && (
         <div className="flex-1 min-h-0 flex flex-col gap-3">
           <div className="shrink-0 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-2">
-            <div className="flex items-center gap-1.5 w-full sm:w-auto">
-              <Select
-                value={selectValue}
-                onValueChange={(value) => {
-                  if (value && value !== NONE_LIBRARY_VALUE) {
-                    setDefaultLibrary(value)
-                    router.push(
-                      `/organizations/${slug}/dashboard/libraries/${value}/problems`
-                    )
-                  } else {
-                    setSelectedLibraryId(value)
-                  }
-                }}
-              >
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <SelectTrigger className="w-full sm:w-[260px]">
-                      <Library className="h-4 w-4 text-muted-foreground" />
-                      <SelectValue placeholder="Select library" />
-                    </SelectTrigger>
-                  </TooltipTrigger>
-                  {selectedLibrary && (
-                    <TooltipContent
-                      side="bottom"
-                      sideOffset={6}
-                      className="max-w-[360px]"
-                    >
-                      <div className="space-y-1">
-                        <div className="font-medium">{selectedLibrary.name}</div>
-                        <div className="opacity-90 whitespace-pre-wrap">
-                          {selectedLibrary.description || "No description."}
-                        </div>
-                      </div>
-                    </TooltipContent>
-                  )}
-                </Tooltip>
-                <SelectContent>
-                  {librariesState?.length ? (
-                    librariesState.map((lib) => (
-                      <SelectItem key={lib.id} value={lib.id}>
-                        <span>{lib.name}</span>
-                        {lib.id === currentDefaultId && (
-                          <span className="ml-1.5 text-xs text-muted-foreground font-normal">
-                            (Default)
-                          </span>
-                        )}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value={NONE_LIBRARY_VALUE} disabled>
-                      No libraries yet
-                    </SelectItem>
-                  )}
-                  <SelectSeparator />
-                  <button
-                    type="button"
-                    className="focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none cursor-pointer disabled:pointer-events-none disabled:opacity-50"
-                    disabled={!selectedLibrary}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      if (!selectedLibrary) return
-
-                      navigator.clipboard.writeText(selectedLibrary.id).then(() => {
-                        setIsLibraryIdCopied(true)
-                        toast.success("Library ID copied to clipboard!")
-                        setTimeout(() => setIsLibraryIdCopied(false), 2000)
-                      })
-                      // Close the select popover by blurring the active element.
-                      setTimeout(() => {
-                        ; (document.activeElement as HTMLElement | null)?.blur?.()
-                      }, 0)
-                    }}
-                  >
-                    {isLibraryIdCopied ? (
-                      <Check className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-                    ) : (
-                      <Copy className="h-4 w-4 text-muted-foreground" />
-                    )}
-                    {isLibraryIdCopied ? "Copied" : "Copy library ID"}
-                  </button>
-                  <button
-                    type="button"
-                    className="focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none cursor-pointer disabled:pointer-events-none disabled:opacity-50"
-                    disabled={!selectedLibrary || !hasLibraryWrite}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      if (!selectedLibrary || !hasLibraryWrite) return
-
-                      setEditLibraryName(selectedLibrary.name)
-                      setEditLibraryDescription(selectedLibrary.description || "")
-                      setIsEditLibraryOpen(true)
-                      // Close the select popover by blurring the active element.
-                      setTimeout(() => {
-                        ; (document.activeElement as HTMLElement | null)?.blur?.()
-                      }, 0)
-                    }}
-                  >
-                    <PencilLine className="h-4 w-4" />
-                    Edit library…
-                  </button>
-                  <button
-                    type="button"
-                    className="focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none cursor-pointer disabled:pointer-events-none disabled:opacity-50 text-destructive hover:text-destructive"
-                    disabled={!selectedLibrary || problems.length > 0 || !hasLibraryWrite}
-                    title={!hasLibraryWrite ? "You lack write permissions for this library" : problems.length > 0 ? "Cannot delete library with problems" : undefined}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      if (!selectedLibrary || problems.length > 0 || !hasLibraryWrite) return
-
-                      setIsDeleteLibraryOpen(true)
-                      // Close the select popover by blurring the active element.
-                      setTimeout(() => {
-                        ; (document.activeElement as HTMLElement | null)?.blur?.()
-                      }, 0)
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    Delete library…
-                  </button>
-                  <SelectSeparator />
-                  <button
-                    type="button"
-                    className="focus:bg-accent focus:text-accent-foreground relative flex w-full cursor-default items-center gap-2 rounded-sm py-1.5 pr-8 pl-2 text-sm outline-hidden select-none cursor-pointer disabled:pointer-events-none disabled:opacity-50"
-                    disabled={!canCreateLibrary}
-                    onClick={(e) => {
-                      e.preventDefault()
-                      e.stopPropagation()
-                      if (!canCreateLibrary) return
-                      setNewLibraryName("")
-                      setNewLibraryDescription("")
-                      setIsCreateLibraryOpen(true)
-                      // Close the select popover by blurring the active element.
-                      setTimeout(() => {
-                        ; (document.activeElement as HTMLElement | null)?.blur?.()
-                      }, 0)
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                    Create new library…
-                  </button>
-                </SelectContent>
-              </Select>
-            </div>
-
             <Button variant="outline" disabled>
               <Filter className="mr-2 h-4 w-4" />
               Filters
@@ -1170,378 +1270,6 @@ export function ProblemsView({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-
-          <Dialog open={isCreateLibraryOpen} onOpenChange={setIsCreateLibraryOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create problem library</DialogTitle>
-                <DialogDescription>
-                  Add a new library to organize your problems.
-                </DialogDescription>
-              </DialogHeader>
-
-              <form
-                className="space-y-4"
-                onSubmit={(e) => {
-                  e.preventDefault()
-
-                  const name = newLibraryName.trim()
-                  const descriptionRaw = newLibraryDescription.trim()
-
-                  if (!name) {
-                    toast.error("Library name is required.")
-                    return
-                  }
-
-                  if (
-                    descriptionRaw.length > 0 &&
-                    (descriptionRaw.length < 8 || descriptionRaw.length > 1024)
-                  ) {
-                    toast.error("Description must be 8–1024 characters (or empty).")
-                    return
-                  }
-
-                  createLibrary({
-                    name,
-                    ...(descriptionRaw.length > 0
-                      ? { description: descriptionRaw }
-                      : {}),
-                  })
-                }}
-              >
-                <div className="space-y-2">
-                  <Label htmlFor="library-name">Name</Label>
-                  <Input
-                    id="library-name"
-                    value={newLibraryName}
-                    onChange={(e) => setNewLibraryName(e.target.value)}
-                    placeholder="e.g. sre"
-                    disabled={isCreatingLibrary}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="library-description">Description (optional)</Label>
-                  <Textarea
-                    id="library-description"
-                    value={newLibraryDescription}
-                    onChange={(e) => setNewLibraryDescription(e.target.value)}
-                    placeholder="Optional description (8–1024 chars if provided)"
-                    disabled={isCreatingLibrary}
-                  />
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsCreateLibraryOpen(false)}
-                    disabled={isCreatingLibrary}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isCreatingLibrary}>
-                    {isCreatingLibrary ? "Creating…" : "Create"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isEditLibraryOpen} onOpenChange={setIsEditLibraryOpen}>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Edit library</DialogTitle>
-                <DialogDescription>
-                  Update the name and description of this library.
-                </DialogDescription>
-              </DialogHeader>
-
-              <form
-                className="space-y-4"
-                onSubmit={(e) => {
-                  e.preventDefault()
-                  if (!selectedLibrary) {
-                    toast.error("Select a library to edit.")
-                    return
-                  }
-
-                  const name = editLibraryName.trim()
-                  const descriptionRaw = editLibraryDescription.trim()
-
-                  if (!name) {
-                    toast.error("Library name is required.")
-                    return
-                  }
-
-                  if (
-                    descriptionRaw.length > 0 &&
-                    (descriptionRaw.length < 8 || descriptionRaw.length > 1024)
-                  ) {
-                    toast.error("Description must be 8–1024 characters (or empty).")
-                    return
-                  }
-
-                  updateLibrary({
-                    libraryId: selectedLibrary.id,
-                    name,
-                    // Allow clearing description by sending null.
-                    description: descriptionRaw.length > 0 ? descriptionRaw : null,
-                  })
-                }}
-              >
-                <div className="space-y-2">
-                  <Label htmlFor="edit-library-name">Name</Label>
-                  <Input
-                    id="edit-library-name"
-                    value={editLibraryName}
-                    onChange={(e) => setEditLibraryName(e.target.value)}
-                    placeholder="e.g. sre"
-                    disabled={isUpdatingLibrary}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-library-description">Description (optional)</Label>
-                  <Textarea
-                    id="edit-library-description"
-                    value={editLibraryDescription}
-                    onChange={(e) => setEditLibraryDescription(e.target.value)}
-                    placeholder="Optional description (8–1024 chars if provided)"
-                    disabled={isUpdatingLibrary}
-                  />
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => setIsEditLibraryOpen(false)}
-                    disabled={isUpdatingLibrary}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit" disabled={isUpdatingLibrary}>
-                    {isUpdatingLibrary ? "Saving…" : "Save changes"}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog open={isAccessDeniedDialogOpen}>
-            <DialogContent 
-              showCloseButton={false}
-              onPointerDownOutside={(e) => e.preventDefault()}
-              onEscapeKeyDown={(e) => e.preventDefault()}
-              className="sm:max-w-[420px]"
-            >
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2">
-                  {isNoDefaultLibrary ? (
-                    <>
-                      <Library className="h-5 w-5 text-primary" />
-                      {librariesState.length === 0 ? "Create Your First Library" : gateModalMode === "create" ? "Create Problem Library" : "Select Default Library"}
-                    </>
-                  ) : (
-                    <>
-                      <AlertTriangle className="h-5 w-5 text-destructive" />
-                      Library Access Denied
-                    </>
-                  )}
-                </DialogTitle>
-                <DialogDescription className="mt-2 text-sm leading-normal">
-                  {isNoDefaultLibrary ? (
-                    librariesState.length === 0
-                      ? "No problem libraries exist in this organization yet. Create a library to start organizing your problems."
-                      : gateModalMode === "create"
-                        ? "Add a new library to organize your problems."
-                        : "Please select a default library for this organization to browse problems, or create a new library."
-                  ) : (
-                    "You no longer have access to the library set as your default. Please select a different library to proceed."
-                  )}
-                </DialogDescription>
-              </DialogHeader>
-
-              {isNoDefaultLibrary && gateModalMode === "create" ? (
-                <div className="space-y-4 py-4">
-                  {!canCreateLibrary ? (
-                    <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md text-center">
-                      You do not have permission to create libraries in this organization. Please contact your organization administrator.
-                      {librariesState.length > 0 && (
-                        <Button
-                          variant="outline"
-                          className="w-full mt-4"
-                          onClick={() => setGateModalMode("select")}
-                        >
-                          Back to selection
-                        </Button>
-                      )}
-                    </div>
-                  ) : (
-                    <form
-                      className="space-y-4"
-                      onSubmit={(e) => {
-                        e.preventDefault()
-                        const name = newLibraryName.trim()
-                        const descriptionRaw = newLibraryDescription.trim()
-                        if (!name) {
-                          toast.error("Library name is required.")
-                          return
-                        }
-                        if (
-                          descriptionRaw.length > 0 &&
-                          (descriptionRaw.length < 8 || descriptionRaw.length > 1024)
-                        ) {
-                          toast.error("Description must be 8–1024 characters (or empty).")
-                          return
-                        }
-                        createLibrary({
-                          name,
-                          ...(descriptionRaw.length > 0
-                            ? { description: descriptionRaw }
-                            : {}),
-                        })
-                      }}
-                    >
-                      <div className="space-y-2">
-                        <Label htmlFor="gate-new-lib-name" className="text-xs font-semibold">
-                          Library Name
-                        </Label>
-                        <Input
-                          id="gate-new-lib-name"
-                          placeholder="e.g. Core Algorithms"
-                          value={newLibraryName}
-                          onChange={(e) => setNewLibraryName(e.target.value)}
-                          disabled={isCreatingLibrary}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label htmlFor="gate-new-lib-desc" className="text-xs font-semibold">
-                          Description (Optional)
-                        </Label>
-                        <Textarea
-                          id="gate-new-lib-desc"
-                          placeholder="Optional description (8–1024 chars if provided)"
-                          value={newLibraryDescription}
-                          onChange={(e) => setNewLibraryDescription(e.target.value)}
-                          disabled={isCreatingLibrary}
-                        />
-                      </div>
-                      <div className="flex gap-2 pt-2">
-                        {librariesState.length > 0 && (
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="flex-1"
-                            onClick={() => setGateModalMode("select")}
-                            disabled={isCreatingLibrary}
-                          >
-                            Back
-                          </Button>
-                        )}
-                        <Button
-                          type="submit"
-                          className="flex-1"
-                          disabled={isCreatingLibrary || isSettingDefault}
-                        >
-                          {isCreatingLibrary ? "Creating..." : "Create & Set Default"}
-                        </Button>
-                      </div>
-                    </form>
-                  )}
-                </div>
-              ) : (
-                <>
-                  <div className="space-y-4 py-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="new-library-select" className="text-sm font-medium">
-                        Choose a library
-                      </Label>
-                      <Select
-                        value={newDefaultLibraryId}
-                        onValueChange={setNewDefaultLibraryId}
-                      >
-                        <SelectTrigger id="new-library-select" className="w-full">
-                          <SelectValue placeholder="Select a library" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {librariesState.map((lib) => (
-                            <SelectItem key={lib.id} value={lib.id}>
-                              {lib.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-
-                  <DialogFooter className="flex flex-col gap-2 sm:flex-col">
-                    <Button
-                      className="w-full"
-                      disabled={!newDefaultLibraryId || isSettingDefault}
-                      onClick={() => {
-                        if (newDefaultLibraryId) {
-                          setDefaultLibrary(newDefaultLibraryId)
-                        }
-                      }}
-                    >
-                      {isSettingDefault ? "Updating..." : isNoDefaultLibrary ? "Set as Default" : "Switch & Set as Default"}
-                    </Button>
-                    {isNoDefaultLibrary && canCreateLibrary && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        className="w-full text-xs text-muted-foreground hover:text-foreground"
-                        onClick={() => {
-                          setGateModalMode("create")
-                          setNewLibraryName("")
-                          setNewLibraryDescription("")
-                        }}
-                      >
-                        Or create a new library instead
-                      </Button>
-                    )}
-                  </DialogFooter>
-                </>
-              )}
-            </DialogContent>
-          </Dialog>
-
-          <AlertDialog
-            open={isDeleteLibraryOpen}
-            onOpenChange={setIsDeleteLibraryOpen}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete library?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to delete{" "}
-                  <span className="font-medium text-foreground">
-                    {selectedLibrary?.name}
-                  </span>
-                  ? This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={isDeletingLibrary}>
-                  Cancel
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  disabled={isDeletingLibrary}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    if (selectedLibrary) {
-                      deleteLibrary(selectedLibrary.id)
-                    }
-                  }}
-                >
-                  {isDeletingLibrary ? "Deleting…" : "Delete"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
 
           {table.getSelectedRowModel().rows.length > 0 && (
             <div className="flex items-center gap-3 rounded-md border bg-muted/50 px-4 py-2">
@@ -1716,6 +1444,379 @@ export function ProblemsView({
           )}
         </div>
       )}
+
+      {/* Global Dialogs & Modals */}
+      <Dialog open={isCreateLibraryOpen} onOpenChange={setIsCreateLibraryOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create problem library</DialogTitle>
+            <DialogDescription>
+              Add a new library to organize your problems.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault()
+
+              const name = newLibraryName.trim()
+              const descriptionRaw = newLibraryDescription.trim()
+
+              if (!name) {
+                toast.error("Library name is required.")
+                return
+              }
+
+              if (
+                descriptionRaw.length > 0 &&
+                (descriptionRaw.length < 8 || descriptionRaw.length > 1024)
+              ) {
+                toast.error("Description must be 8–1024 characters (or empty).")
+                return
+              }
+
+              createLibrary({
+                name,
+                ...(descriptionRaw.length > 0
+                  ? { description: descriptionRaw }
+                  : {}),
+              })
+            }}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="library-name">Name</Label>
+              <Input
+                id="library-name"
+                value={newLibraryName}
+                onChange={(e) => setNewLibraryName(e.target.value)}
+                placeholder="e.g. sre"
+                disabled={isCreatingLibrary}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="library-description">Description (optional)</Label>
+              <Textarea
+                id="library-description"
+                value={newLibraryDescription}
+                onChange={(e) => setNewLibraryDescription(e.target.value)}
+                placeholder="Optional description (8–1024 chars if provided)"
+                disabled={isCreatingLibrary}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsCreateLibraryOpen(false)}
+                disabled={isCreatingLibrary}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isCreatingLibrary}>
+                {isCreatingLibrary ? "Creating…" : "Create"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditLibraryOpen} onOpenChange={setIsEditLibraryOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit library</DialogTitle>
+            <DialogDescription>
+              Update the name and description of this library.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form
+            className="space-y-4"
+            onSubmit={(e) => {
+              e.preventDefault()
+              if (!selectedLibrary) {
+                toast.error("Select a library to edit.")
+                return
+              }
+
+              const name = editLibraryName.trim()
+              const descriptionRaw = editLibraryDescription.trim()
+
+              if (!name) {
+                toast.error("Library name is required.")
+                return
+              }
+
+              if (
+                descriptionRaw.length > 0 &&
+                (descriptionRaw.length < 8 || descriptionRaw.length > 1024)
+              ) {
+                toast.error("Description must be 8–1024 characters (or empty).")
+                return
+              }
+
+              updateLibrary({
+                libraryId: selectedLibrary.id,
+                name,
+                // Allow clearing description by sending null.
+                description: descriptionRaw.length > 0 ? descriptionRaw : null,
+              })
+            }}
+          >
+            <div className="space-y-2">
+              <Label htmlFor="edit-library-name">Name</Label>
+              <Input
+                id="edit-library-name"
+                value={editLibraryName}
+                onChange={(e) => setEditLibraryName(e.target.value)}
+                placeholder="e.g. sre"
+                disabled={isUpdatingLibrary}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-library-description">Description (optional)</Label>
+              <Textarea
+                id="edit-library-description"
+                value={editLibraryDescription}
+                onChange={(e) => setEditLibraryDescription(e.target.value)}
+                placeholder="Optional description (8–1024 chars if provided)"
+                disabled={isUpdatingLibrary}
+              />
+            </div>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsEditLibraryOpen(false)}
+                disabled={isUpdatingLibrary}
+              >
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isUpdatingLibrary}>
+                {isUpdatingLibrary ? "Saving…" : "Save changes"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAccessDeniedDialogOpen} onOpenChange={setIsAccessDeniedDialogOpen}>
+        <DialogContent 
+          showCloseButton={false}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          className="sm:max-w-[420px]"
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {isNoDefaultLibrary ? (
+                <>
+                  <Library className="h-5 w-5 text-primary" />
+                  {librariesState.length === 0 ? "Create Your First Library" : gateModalMode === "create" ? "Create Problem Library" : "Select Default Library"}
+                </>
+              ) : (
+                <>
+                  <AlertTriangle className="h-5 w-5 text-destructive" />
+                  Library Access Denied
+                </>
+              )}
+            </DialogTitle>
+            <DialogDescription className="mt-2 text-sm leading-normal">
+              {isNoDefaultLibrary ? (
+                librariesState.length === 0
+                  ? "No problem libraries exist in this organization yet. Create a library to start organizing your problems."
+                  : gateModalMode === "create"
+                    ? "Add a new library to organize your problems."
+                    : "Please select a default library for this organization to browse problems, or create a new library."
+              ) : (
+                "You no longer have access to the library set as your default. Please select a different library to proceed."
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {isNoDefaultLibrary && gateModalMode === "create" ? (
+            <div className="space-y-4 py-4">
+              {!canCreateLibrary ? (
+                <div className="text-sm text-muted-foreground p-3 bg-muted rounded-md text-center">
+                  You do not have permission to create libraries in this organization. Please contact your organization administrator.
+                  {librariesState.length > 0 && (
+                    <Button
+                      variant="outline"
+                      className="w-full mt-4"
+                      onClick={() => setGateModalMode("select")}
+                    >
+                      Back to selection
+                    </Button>
+                  )}
+                </div>
+              ) : (
+                <form
+                  className="space-y-4"
+                  onSubmit={(e) => {
+                    e.preventDefault()
+                    const name = newLibraryName.trim()
+                    const descriptionRaw = newLibraryDescription.trim()
+                    if (!name) {
+                      toast.error("Library name is required.")
+                      return
+                    }
+                    if (
+                      descriptionRaw.length > 0 &&
+                      (descriptionRaw.length < 8 || descriptionRaw.length > 1024)
+                    ) {
+                      toast.error("Description must be 8–1024 characters (or empty).")
+                      return
+                    }
+                    createLibrary({
+                      name,
+                      ...(descriptionRaw.length > 0
+                        ? { description: descriptionRaw }
+                        : {}),
+                    })
+                  }}
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor="gate-new-lib-name" className="text-xs font-semibold">
+                      Library Name
+                    </Label>
+                    <Input
+                      id="gate-new-lib-name"
+                      placeholder="e.g. Core Algorithms"
+                      value={newLibraryName}
+                      onChange={(e) => setNewLibraryName(e.target.value)}
+                      disabled={isCreatingLibrary}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="gate-new-lib-desc" className="text-xs font-semibold">
+                      Description (Optional)
+                    </Label>
+                    <Textarea
+                      id="gate-new-lib-desc"
+                      placeholder="Optional description (8–1024 chars if provided)"
+                      value={newLibraryDescription}
+                      onChange={(e) => setNewLibraryDescription(e.target.value)}
+                      disabled={isCreatingLibrary}
+                    />
+                  </div>
+                  <div className="flex gap-2 pt-2">
+                    {librariesState.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="flex-1"
+                        onClick={() => setGateModalMode("select")}
+                        disabled={isCreatingLibrary}
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                    <Button
+                      type="submit"
+                      className="flex-1"
+                      disabled={isCreatingLibrary}
+                    >
+                      {isCreatingLibrary ? "Creating..." : "Create Library"}
+                    </Button>
+                  </div>
+                </form>
+              )}
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <Label htmlFor="new-library-select" className="text-xs font-semibold">
+                    Select Library
+                  </Label>
+                  <Select
+                    value={newDefaultLibraryId}
+                    onValueChange={setNewDefaultLibraryId}
+                  >
+                    <SelectTrigger id="new-library-select" className="w-full">
+                      <SelectValue placeholder="Select a library" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {librariesState.map((lib) => (
+                        <SelectItem key={lib.id} value={lib.id}>
+                          {lib.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <DialogFooter className="flex flex-col gap-2 sm:flex-col">
+                <Button
+                  className="w-full"
+                  disabled={!newDefaultLibraryId || isSettingDefault}
+                  onClick={() => {
+                    if (newDefaultLibraryId) {
+                      setDefaultLibrary(newDefaultLibraryId)
+                    }
+                  }}
+                >
+                  {isSettingDefault ? "Updating..." : isNoDefaultLibrary ? "Set as Default" : "Switch & Set as Default"}
+                </Button>
+                {isNoDefaultLibrary && canCreateLibrary && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    className="w-full text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      setGateModalMode("create")
+                      setNewLibraryName("")
+                      setNewLibraryDescription("")
+                    }}
+                  >
+                    Or create a new library instead
+                  </Button>
+                )}
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog
+        open={isDeleteLibraryOpen}
+        onOpenChange={setIsDeleteLibraryOpen}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete library?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete{" "}
+              <span className="font-medium text-foreground">
+                {selectedLibrary?.name}
+              </span>
+              ? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeletingLibrary}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeletingLibrary}
+              onClick={(e) => {
+                e.preventDefault()
+                if (selectedLibrary) {
+                  deleteLibrary(selectedLibrary.id)
+                }
+              }}
+            >
+              {isDeletingLibrary ? "Deleting…" : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
