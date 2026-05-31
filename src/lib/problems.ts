@@ -103,7 +103,7 @@ export async function createOrganizationProblemLibrary(
   token: string
 ) {
   const response = await BackendClient.post<ProblemLibrary>(
-    `/problem-libraries`,
+    `/organizations/${slug}/problem-libraries`,
     body,
     {
       headers: {
@@ -121,7 +121,7 @@ export async function updateProblemLibrary(
   token: string
 ) {
   const response = await BackendClient.put<ProblemLibrary>(
-    `/problem-libraries/${libraryId}`,
+    `/organizations/${slug}/problem-libraries/${libraryId}`,
     body,
     {
       headers: {
@@ -138,7 +138,7 @@ export async function deleteProblemLibrary(
   token: string
 ) {
   const response = await BackendClient.delete<void>(
-    `/problem-libraries/${libraryId}`,
+    `/organizations/${slug}/problem-libraries/${libraryId}`,
     {
       headers: {
         Authorization: `Bearer ${token}`,
